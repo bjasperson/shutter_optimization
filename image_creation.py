@@ -283,17 +283,17 @@ class Image():
                 f.write(bits_file)
        
         #paramfile    
-        paramfile = "base_date base_time filename_start filename_stop T_em\n"
-        base_string = timestamp.split("-")[0] + " " + timestamp.split("-")[1] + " 0 " + str(N-1) +" "
-        paramfile_273 = paramfile + base_string + "273.15"
-        paramfile_373 = paramfile + base_string + "373.15"
+        # paramfile = "base_date base_time filename_start filename_stop T_em\n"
+        # base_string = timestamp.split("-")[0] + " " + timestamp.split("-")[1] + " 0 " + str(N-1) +" "
+        # paramfile_273 = paramfile + base_string + "273.15"
+        # paramfile_373 = paramfile + base_string + "373.15"
         
         
-        with open(os.path.join(path,'paramfile_273.txt'),'w') as output:
-            output.write(paramfile_273)
+        # with open(os.path.join(path,'paramfile_273.txt'),'w') as output:
+        #     output.write(paramfile_273)
             
-        with open(os.path.join(path,'paramfile_373.txt'),'w') as output:
-            output.write(paramfile_373)
+        # with open(os.path.join(path,'paramfile_373.txt'),'w') as output:
+        #     output.write(paramfile_373)
             
 
 ##########################################################################
