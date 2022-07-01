@@ -33,7 +33,7 @@ master_directory = '/home/jaspers2/Documents/pixel_optimization/prod1_data/clust
 class Image():
     
     def __init__(self):
-        self.thk = [100,200]
+        self.thk = [400,240] #thk[0] is closest to substrate
         self.temp = [273.15, 373.15]
         
     def input_selection(self):
@@ -415,7 +415,7 @@ def readme_create(comsol_rev,N,thk):
     readme = 'script name: ' + os.path.basename(__file__) + '\n'
     readme += 'comsol file version = ' + str(comsol_rev) + '\n'
     readme += 'image shape = ' + str(N) + '\n'
-    readme += 'thickness = ' + str(thk) + '\n'
+    readme += 'thickness = ' + str(thk) + ' (thk[0] is closest to substrate)\n'
     readme += 'additional notes: ' + input('additional notes:  ') + '\n'
     
     # readme += '--------------------------------\n'
