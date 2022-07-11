@@ -88,12 +88,9 @@ class Image():
     def save_output(self):
         feature_image = self.images_w_thk
         thk = self.thk
-        date = datetime.datetime.now()
-        timestamp = (str(date.year)[-2:]+ str(date.month).rjust(2,'0')+  
-                     str(date.day).rjust(2,'0') 
-                     + '-' + str(date.hour).rjust(2,'0') + 
-                     str(date.minute).rjust(2,'0'))
 
+        timestamp = create_timestamp()
+        
         #make folder
         path = folder_create(timestamp)
         
@@ -408,6 +405,14 @@ def folder_create(timestamp):
     print("directory created: ",new_directory)
     return(new_directory)  
 
+
+def create_timestamp():
+    date = datetime.datetime.now()
+    timestamp = (str(date.year)[-2:]+ str(date.month).rjust(2,'0')+  
+                 str(date.day).rjust(2,'0') 
+                 + '-' + str(date.hour).rjust(2,'0') + 
+                 str(date.minute).rjust(2,'0'))
+    return timestamp
 
 ##########################################################################
 def readme_create(comsol_rev,N,thk):

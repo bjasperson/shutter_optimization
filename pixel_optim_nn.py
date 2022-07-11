@@ -17,8 +17,9 @@ import pickle
 import perf_net
 import importlib
 
-
 import matplotlib.pyplot as plt
+
+import image_creation
 
 plt.rcParams['figure.dpi'] = 150
 
@@ -360,7 +361,7 @@ class Labels():
     #add flag: scaled or normalized
     
 
-
+#%%
 class TopOpt():
     """
     Topology optimization. Executes topology optimization using 
@@ -644,12 +645,26 @@ class TopOpt():
 
         return
 
-    def save_results(self, folder):
+    def save_results(self, path):
+        #get timestamp
+        timestamp = image_creation.create_timestamp()
+        
         # save image
-        name = folder + '/optimized_design.npy'
-        array = self.images.detach().numpy()
-        np.save(name, array)
+        image = image_creation.Image()
+        image.images = self.images.detach().numpy()[0][0]
+        H,W = image.images.shape
+        name = path + '/optimized_design_' + timestamp + '.npy'
+        np.save(name, image.images)
         print('saved to: ', name)
+        
+        #save bit files
+        image.images[image.images>0.5] = 1
+        image.images[image.images<1] = 0
+        
+        #save requires N,C,H,W images
+        image.images = image.images.reshape(1,1,H,W)
+        
+        image.save_comsol_inputs_gen2(path, timestamp)
 
 
 # %%

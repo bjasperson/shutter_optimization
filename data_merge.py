@@ -9,9 +9,6 @@ Created on Wed Jun  8 06:21:55 2022
 import numpy as np
 import pandas as pd
 import os
-import csv
-
-
 
 def main():
     base_folder = "/home/jaspers2/Documents/pixel_optimization/prod1_data/"
