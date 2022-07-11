@@ -99,7 +99,9 @@ class TopNet(nn.Module):
             print('WARNING WARNING WARNING: turned requires_grad off on thickness\n')
 
     def thk_layer_init(self, thk, grad_setting=True):
-        # * torch.ones(self.num_layers).reshape((self.num_layers, 1, 1))
+        """takes normalized initial thk array, creates weightx NN parameters
+        """
+        
         tensor_thk = torch.tensor(thk).reshape((len(thk), 1, 1))
         return torch.nn.Parameter(tensor_thk).requires_grad_(grad_setting)
 
@@ -509,6 +511,16 @@ class TopOpt():
         return loss, error_terms, error_terms_labels
 
 
+    def pretrain(self, initial_density):
+        """pretrain top_opt to output given, uniform density
+        """
+        
+        #make target rho array
+        
+        
+        
+        pass
+    
     def optimize(self, alpha_0, delta_alpha, alpha_max, max_epochs, p_init, delta_p, p_max):
         """perform optimization/training of top_op
 
@@ -518,8 +530,8 @@ class TopOpt():
 
         """
 
-        self.perfnn.eval()  # only set perf_net to eval mode
-        self.top_net.train()
+        self.perfnn.eval()  #set perf_net to eval mode
+        self.top_net.train() #top_net is training (influences dropout)
 
         alpha = alpha_0
 
@@ -580,8 +592,6 @@ class TopOpt():
         images = images[None]  # adds axis, [1,2,20,20]
         predicted_perf.label_update(self.perfnn(images), 'normalized')        
 
-
-        
         predicted_perf.scale_labels()
         self.predicted_perf = predicted_perf
         self.images = images
@@ -657,13 +667,19 @@ class TopOpt():
         np.save(name, image.images)
         print('saved to: ', name)
         
-        #save bit files
+        #convert to binary for csv and bit files
         image.images[image.images>0.5] = 1
         image.images[image.images<1] = 0
         
-        #save requires N,C,H,W images
-        image.images = image.images.reshape(1,1,H,W)
+        #save csv for michael
+        image_txt = []
+        for i in range(H):
+            for j in range(W):
+                image_txt.append([i,j,image.images[i,j]])
+        np.savetxt(path+'/optimized_design_'+timestamp+'.csv',image_txt,delimiter=",")
         
+        #save bits (requires N,C,H,W images)
+        image.images = image.images.reshape(1,1,H,W)
         image.save_comsol_inputs_gen2(path, timestamp)
 
 
@@ -723,16 +739,6 @@ def dB_response(Tr_ins,Tr_met):
         insertion_loss = 10*np.log10(1/Tr_ins)
     
     return(extinction_ratio,insertion_loss)
-
-def get_folder():
-    # folder = '/home/jaspers2/Documents/pixel_optimization/validation_data/220328/2022-3-28-12-56_2/2022-3-31-11-18_trained_model'
-    # folder_input = input('use existing folder? y or n \n' + folder + '\n')
-    # if folder_input == 'n':
-    #     folder = input('list folder: ')
-    #     print('using folder: \n',folder)
-    
-    folder = input('base model folder: ')
-    return folder
 
 def plot_error(error_terms, error_labels, y_limit = None):
     error_terms = np.array(error_terms)
@@ -818,9 +824,8 @@ def main():
     print("Warning: changed loss function")
     device = use_gpu(False)
     
-    base_model_folder = get_folder()
+    perf_nn_folder = input('trained_model_[date] folder: ')
     #base_model_folder = '/home/jaspers2/Documents/pixel_optimization/dof_exploration/testing/220506-0710'
-    perf_nn_folder = base_model_folder + '/trained_model'
     
     
     # only use during debugging (slows code)
@@ -831,9 +836,14 @@ def main():
     perfnn = load_perfnet(perf_nn_folder)
         
     #initilize top_opt
-    top_opt = TopOpt(perfnn, .00001, device, False, symmetric=True)
+    top_opt = TopOpt(perfnn, .0001, device, False, symmetric=True)
     top_opt.set_targets(perfnn.label_names, 1,0,340)
-    top_opt.optimize(0,0,0,10_000,1,0.005,1)
+    
+    if input("pretrain top_opt to specified rho? [y/n]")=="y":
+        pretrain_density = input("pretrain density: ")
+        top_opt.pretrain(pretrain_density)
+    
+    top_opt.optimize(0,0,0,5000,1,0.005,1)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
@@ -851,7 +861,7 @@ def main():
     #     compare_prediction(top_opt.images, base_model_folder)
     
     if input('save results? y to save:  ') == 'y':
-        top_opt.save_results(base_model_folder)
+        top_opt.save_results(perf_nn_folder)
 
     return top_opt
 

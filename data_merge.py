@@ -11,9 +11,10 @@ import pandas as pd
 import os
 
 def main():
-    base_folder = "/home/jaspers2/Documents/pixel_optimization/prod1_data/"
-    image_folder = base_folder + "images" 
-    results_folder = base_folder + "results"
+    base_folder = input("prod[x]_data folder:  ")
+    #base_folder = "/home/jaspers2/Documents/pixel_optimization/prod2_data/"
+    image_folder = base_folder + "/images" 
+    results_folder = base_folder + "/results"
     
     #process input data, merge and create combined results
     if input("process input data (y/n)? ")=="y":
@@ -99,9 +100,9 @@ def nn_config(combined_df):
     return(combined_df,np_images,np_results)
 
 def save_results(path, df_all, np_images, df_results):
-    df_all.to_pickle(path + 'combined_results/df_all.pkl')
-    np.save(os.path.join(path,'combined_results/feature_images'),np_images)
-    df_results.to_csv(path + 'combined_results/final_comsol_results.csv', index=False)
+    df_all.to_pickle(path + '/combined_results/df_all.pkl')
+    np.save(path + '/combined_results/feature_images',np_images)
+    df_results.to_csv(path + '/combined_results/final_comsol_results.csv', index=False)
     
 
 
