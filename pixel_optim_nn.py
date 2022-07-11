@@ -168,7 +168,9 @@ class TopNet(nn.Module):
 
         x = torch.reshape(x, (1, self.image_shape[1], self.image_shape[2]))
         self.rho = x  # save density function
-        x = x**p_set*self.weightx  # multiply by weights for layer thickness
+        
+        # multiply by weights for layer thickness (creates indiv channels)
+        x = x**p_set*self.weightx  
         return x
 
     def num_flat_features(self, x):
@@ -511,12 +513,21 @@ class TopOpt():
         return loss, error_terms, error_terms_labels
 
 
-    def pretrain(self, initial_density):
+    def pretrain(self, initial_density, num_epochs):
         """pretrain top_opt to output given, uniform density
         """
+        self.perfnn.eval()  #set perf_net to eval mode
+        self.top_net.train() #top_net is training (influences dropout)
         
         #make target rho array
+        C,H,W = self.image_shape
+        x = self.top_net.weightx*float(initial_density)*torch.ones(1,int(H),int(W)) #density funct is 1 channel only
+        x = x[None]
+        print(x.shape)
         
+        for i in range(num_epochs):
+            
+            pass
         
         
         pass
@@ -671,7 +682,7 @@ class TopOpt():
         image.images[image.images>0.5] = 1
         image.images[image.images<1] = 0
         
-        #save csv for michael
+        #save csv for fab
         image_txt = []
         for i in range(H):
             for j in range(W):
@@ -841,7 +852,7 @@ def main():
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
-        top_opt.pretrain(pretrain_density)
+        top_opt.pretrain(pretrain_density,50)
     
     top_opt.optimize(0,0,0,5000,1,0.005,1)
     top_opt.print_predicted_performance()
