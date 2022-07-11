@@ -345,7 +345,7 @@ def save_model(input_data, network, data_directory):
 
     # create directory
     #new_directory = os.path.join(data_directory,timestamp + '_trained_model')
-    new_directory = os.path.join(data_directory, 'trained_model')
+    new_directory = os.path.join(data_directory, 'trained_model_'+timestamp)
     os.mkdir(new_directory)
     print("directory created: ", new_directory)
 
@@ -388,7 +388,7 @@ def main():
     # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
-    num_epochs = 15  # was 200
+    num_epochs = 2  # was 200
     learning_rate = .0001  # was 0.001
     momentum = 0.87
 
