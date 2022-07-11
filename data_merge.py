@@ -18,15 +18,23 @@ def main():
     image_folder = base_folder + "images" 
     results_folder = base_folder + "results"
     
-    #import all files in folder
-    df_images = import_images(image_folder)
-    df_results = import_results(results_folder)
+    #process input data, merge and create combined results
+    if input("process input data (y/n)? ")=="y":
+        #import all files in folder
+        df_images = import_images(image_folder)
+        df_results = import_results(results_folder)
+        
+        df_combined = combined_results(df_images,df_results)
+        df_combined,np_combined_images,df_combined_results = nn_config(df_combined)
+        save_results(base_folder, df_combined, np_combined_images, df_combined_results)
     
-    df_combined = combined_results(df_images,df_results)
-    np_combined_images,df_combined_results = nn_config(df_combined)
-    save_results(base_folder, np_combined_images, df_combined_results)
-    
-    pass
+    if input("analyze results (y/n)?  ")=="y":
+        check = "df_combined_results" in locals() 
+        if check == False:
+            df_combined_results = pd.read_csv(base_folder+"combined_results/final_comsol_results.csv")
+        
+                    
+
 
 
 def import_images(folder):
@@ -48,6 +56,9 @@ def import_images(folder):
 
 def import_results(folder):
     #returns df of results from text files in folder
+    
+    #try this next: https://python-bloggers.com/2021/09/3-ways-to-read-multiple-csv-files-for-loop-map-list-comprehension/
+    
     df = pd.DataFrame()
     for file in os.listdir(folder):
         df_in = pd.read_csv(os.path.join(folder,file),index_col='id')
@@ -57,19 +68,29 @@ def import_results(folder):
     
     return(df)
 
-def analyze_results():
+def analyze_results(file_path):
     #perform any analysis on results as needed
+
     pass
 
 def combined_results(images,results):
-    #this should call import_images and import_results
-    #then, sort and combine into format needed by pixel_nn.py
     combined = pd.concat([images,results],axis=1).dropna(axis=0)    
+    combined["ext_ratio"] = 10*np.log10(combined["Tr_ins"]/combined["Tr_met"])
+    combined["insert_loss"] = 10*np.log10(1/combined["Tr_ins"])
     
     return(combined)
 
 def nn_config(combined_df):
     #saves the combined feature_images.npy
+    
+    #temporarily remove any Tr_ins < 0.5 and ext_ratio < 0
+    print("WARNING: Tr_ins<0.5 and ext_ratio<0 removed")
+    combined_df = combined_df[combined_df["ext_ratio"]>0]
+    combined_df = combined_df[combined_df["Tr_ins"]>0.5]
+    combined_df = combined_df[combined_df["ext_ratio"]<19]
+    
+    
+    #clean up for numpy array
     np_images = combined_df['image'].to_numpy()
     np_images = [np_images[i] for i in range(len(np_images))]
     np_images = np.asarray(np_images)
@@ -78,12 +99,13 @@ def nn_config(combined_df):
     np_results = combined_df[['R_ins','R_met','Tr_ins','Tr_met','A_ins','A_met','T_VO2_avg']]
     np_results = np_results.rename(columns={'T_VO2_avg':'Temp'})
     
-    return(np_images,np_results)
+    return(combined_df,np_images,np_results)
 
-def save_results(path, np_images,np_results):
+def save_results(path, df_all, np_images, df_results):
+    df_all.to_pickle(path + 'combined_results/df_all.pkl')
+    np.save(os.path.join(path,'combined_results/feature_images'),np_images)
+    df_results.to_csv(path + 'combined_results/final_comsol_results.csv', index=False)
     
-    np.save(os.path.join(path,'feature_images'),np_images)
-    np_results.to_csv(path + 'final_comsol_results.csv', index=False)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 
 #master_directory = '/home/jaspers2/Documents/pixel_optimization/validation_data'
 #master_directory = '/home/jaspers2/Documents/pixel_optimization/dof_exploration'
-master_directory = '/home/jaspers2/Documents/pixel_optimization/prod1_data/cluster'
+master_directory = '/home/jaspers2/Documents/pixel_optimization/prod2_data/cluster'
 
 class Image():
     
