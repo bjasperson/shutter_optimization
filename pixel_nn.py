@@ -388,7 +388,7 @@ def main():
     # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
-    num_epochs = 2  # was 200
+    num_epochs = 100  # was 200
     learning_rate = .0001  # was 0.001
     momentum = 0.87
 

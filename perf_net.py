@@ -528,7 +528,7 @@ class Network9(Network):
         num_layers = input_data.num_channels
         num_labels = len(input_data.labels_names)
         
-        out_ch_conv1 = 64
+        out_ch_conv1 = 128
         k1 = kernel_size   
         p1 = kernel_size
         s1 = kernel_size

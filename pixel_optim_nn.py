@@ -79,8 +79,8 @@ class TopNet(nn.Module):
         
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0.02) #was 0.02
-        self.drop_layer4 = nn.Dropout(0.02) #was 0.02
+        self.drop_layer3 = nn.Dropout(0) #was 0.02
+        self.drop_layer4 = nn.Dropout(0) #was 0.02
         
         
         self.l_relu1 = nn.LeakyReLU(0) #was 0.1
@@ -847,14 +847,14 @@ def main():
     perfnn = load_perfnet(perf_nn_folder)
         
     #initilize top_opt
-    top_opt = TopOpt(perfnn, .0001, device, False, symmetric=True)
+    top_opt = TopOpt(perfnn, .001, device, False, symmetric=True)
     top_opt.set_targets(perfnn.label_names, 1,0,340)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,50)
     
-    top_opt.optimize(0,0,0,5000,1,0.005,1)
+    top_opt.optimize(0,0,0,10_000,1,0.005,1)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
