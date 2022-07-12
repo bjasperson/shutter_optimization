@@ -181,10 +181,6 @@ class TopNet(nn.Module):
             num_features *= s
         return num_features
 
-    def pretrain():
-
-        return
-
 
 # %% legacy CustLoss class
 # class CustLoss(torch.nn.Module):
@@ -521,16 +517,23 @@ class TopOpt():
         
         #make target rho array
         C,H,W = self.image_shape
-        x = self.top_net.weightx*float(initial_density)*torch.ones(1,int(H),int(W)) #density funct is 1 channel only
-        x = x[None]
-        print(x.shape)
+        target = self.top_net.weightx*float(initial_density)*torch.ones(1,int(H),int(W)) #density funct is 1 channel only
+        target = target[None]
         
         for i in range(num_epochs):
+            images = self.top_net(self.input_xy, 1,symmetric=True)
+            images = images[None]
+            loss = ((target-images)**2).sum()
             
-            pass
-        
-        
-        pass
+            if i % 100 == 0:
+                print("pretrain loss: ",loss)
+            
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            
+        self.plot_images(images, 'pretrained image')
+
     
     def optimize(self, alpha_0, delta_alpha, alpha_max, max_epochs, p_init, delta_p, p_max):
         """perform optimization/training of top_op
@@ -852,9 +855,9 @@ def main():
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
-        top_opt.pretrain(pretrain_density,50)
+        top_opt.pretrain(pretrain_density,1000)
     
-    top_opt.optimize(0,0,0,10_000,1,0.005,1)
+    top_opt.optimize(0,0,0,2000,1,0.005,1)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
