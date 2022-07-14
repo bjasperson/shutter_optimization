@@ -28,7 +28,8 @@ import matplotlib.pyplot as plt
 
 #master_directory = '/home/jaspers2/Documents/pixel_optimization/validation_data'
 #master_directory = '/home/jaspers2/Documents/pixel_optimization/dof_exploration'
-master_directory = '/home/jaspers2/Documents/pixel_optimization/prod2_data/cluster'
+#master_directory = '/home/jaspers2/Documents/pixel_optimization/prod2_data/cluster'
+master_directory = '/home/jaspers2/Documents/pixel_optimization/'
 
 class Image():
     
@@ -121,74 +122,76 @@ class Image():
         with open(os.path.join(path,'readme.txt'),'w') as output:
             output.write(readme_file)
         
-        if input('DEPRECATED - generate squares files for import to comsol (y/n)?     ') == 'y':
-            self.save_comsol_inputs(path, timestamp)
+        # if input('DEPRECATED - generate squares files for import to comsol (y/n)?     ') == 'y':
+        #     self.save_comsol_inputs(path, timestamp)
             
         if input('generate gen2 param file for cluster+parametric sweep (y/n)?   ') == 'y':
             self.save_comsol_inputs_gen2(path, timestamp)
         
-        if input('generate simulated results? y to gen/save:   ') == 'y':
-            if input('1) use random training image as ideal or 2) generate new image?    ') == '1':
-                target_image_id = int(0.67*self.images.shape[0])
-                target_image = feature_image[target_image_id][0]
-                print('target_image:\n',target_image)
-            else: 
-                target_image = random_gen_2(1, self.images.shape[2])[0,0]
-                print('target image:\n',target_image)
+        # if input('generate simulated results? y to gen/save:   ') == 'y':
+        #     if input('1) use random training image as ideal or 2) generate new image?    ') == '1':
+        #         target_image_id = int(0.67*self.images.shape[0])
+        #         target_image = feature_image[target_image_id][0]
+        #         print('target_image:\n',target_image)
+        #     else: 
+        #         target_image = random_gen_2(1, self.images.shape[2])[0,0]
+        #         print('target image:\n',target_image)
             
-            target_image[target_image>0] = 1
+        #     target_image[target_image>0] = 1
                 
-            labels, fake_results = simulated_results(self.images,target_image)
+        #     labels, fake_results = simulated_results(self.images,target_image)
             
             
             
-            np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '')
+            # np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '')
+            # np.save(os.path.join(path,'target_image'),target_image)
+        
+        if input('generate (symmetric) simulated results? y to gen/save:   ') == 'y':
+            target_image, labels, fake_results = simulated_sym_results(self.images)
+
+            np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '',delimiter=",")
             np.save(os.path.join(path,'target_image'),target_image)
         
+               
+    # def save_comsol_inputs(self, path, timestamp):
+    #     #saves the  file for comsol import        
+    #     path_squares = os.path.join(path,'comsol_import')
+    #     os.mkdir(path_squares)
         
-        ## save key
-        # key_name = os.path.join(path,'key.csv')
-        # key.to_csv(key_name)
-       
-    def save_comsol_inputs(self, path, timestamp):
-        #saves the  file for comsol import        
-        path_squares = os.path.join(path,'comsol_import')
-        os.mkdir(path_squares)
+    #     N,C,H,W = self.images.shape
         
-        N,C,H,W = self.images.shape
+    #     #make xy grid
+    #     x = np.linspace(-self.cell_width_um/2 + self.pixel_width_um/2,
+    #                     self.cell_width_um/2 - self.pixel_width_um/2,
+    #                     W)
+    #     y = x
+    #     xv, yv = np.meshgrid(x, y)
+    #     xv = xv.reshape(1,1,H,W)
+    #     yv = yv.reshape(1,1,H,W)
         
-        #make xy grid
-        x = np.linspace(-self.cell_width_um/2 + self.pixel_width_um/2,
-                        self.cell_width_um/2 - self.pixel_width_um/2,
-                        W)
-        y = x
-        xv, yv = np.meshgrid(x, y)
-        xv = xv.reshape(1,1,H,W)
-        yv = yv.reshape(1,1,H,W)
+    #     x_locs = self.images*xv
+    #     y_locs = self.images*yv
         
-        x_locs = self.images*xv
-        y_locs = self.images*yv
-        
-        #x_locs = np.trim_zeros(x_locs)
-        #y_locs = np.trim_zeros(y_locs)
+    #     #x_locs = np.trim_zeros(x_locs)
+    #     #y_locs = np.trim_zeros(y_locs)
 
-        for i in range(N):
-            x_locs_list = x_locs[i,0][x_locs[i,0] != 0].tolist()
-            y_locs_list = y_locs[i,0][y_locs[i,0] != 0].tolist()
+    #     for i in range(N):
+    #         x_locs_list = x_locs[i,0][x_locs[i,0] != 0].tolist()
+    #         y_locs_list = y_locs[i,0][y_locs[i,0] != 0].tolist()
 
-            loc_file = ''        
-            for j in range(len(x_locs_list)):            
-                loc_file += str(x_locs_list[j]) + ',' + str(y_locs_list[j]) + '\n'
+    #         loc_file = ''        
+    #         for j in range(len(x_locs_list)):            
+    #             loc_file += str(x_locs_list[j]) + ',' + str(y_locs_list[j]) + '\n'
             
-            with open(os.path.join(path_squares,timestamp+'_'+str(i)+'.csv'),'w') as output:
-                output.write(loc_file)
+    #         with open(os.path.join(path_squares,timestamp+'_'+str(i)+'.csv'),'w') as output:
+    #             output.write(loc_file)
                 
-        #save paramfile
-        paramfile = "filename_start filename_stop base_date base_time\n"
-        paramfile += "0 " + str(N-1) + " " + timestamp.split("-")[0] + " " + timestamp.split("-")[1]
+    #     #save paramfile
+    #     paramfile = "filename_start filename_stop base_date base_time\n"
+    #     paramfile += "0 " + str(N-1) + " " + timestamp.split("-")[0] + " " + timestamp.split("-")[1]
         
-        with open(os.path.join(path_squares,'paramfile.txt'),'w') as output:
-            output.write(paramfile)
+    #     with open(os.path.join(path_squares,'paramfile.txt'),'w') as output:
+    #         output.write(paramfile)
             
     def save_comsol_inputs_gen2(self, path, timestamp):
         N,C,H,W = self.images.shape
@@ -377,7 +380,7 @@ def random_gen_4(N_pts,N_pixels_width):
     rand_array = np.concatenate((rand_array,np.flip(rand_array,3)),axis=3)
     
     
-    return(rand_array)
+    return rand_array
 
 ##########################################################################
 def simulated_results(images,ideal_image):
@@ -397,6 +400,35 @@ def simulated_results(images,ideal_image):
     labels = 'R_ins R_met Tr_ins Tr_met A_ins A_met Temp'
     
     return labels, out
+
+def simulated_sym_results(images):
+    """
+    """
+    N,C,H,W = images.shape
+    ideal_index = int(np.random.rand(1)*N)
+    
+    target_image = images[ideal_index,0]
+    plt.imshow(target_image)
+    plt.title("simulated ideal image")
+    
+    loss = abs(images - images[ideal_index])
+    loss = loss.sum(axis=(2,3)).reshape(-1)
+    
+    Tr_ins = 1-0.5*loss/max(loss)
+    Tr_met = 0.5*loss/max(loss)
+    R_ins = (1 - Tr_ins)*0.5
+    R_met = (1 - Tr_met)*0.5
+    A_ins = 1 - Tr_ins - R_ins
+    A_met = 1 - Tr_met - R_met
+    Temp = 340-70*loss/max(loss)
+    
+    out = np.array((R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp)).transpose()
+    out[out==0] = 0.001
+    
+    labels = 'R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp'
+    
+    return target_image, labels, out
+    
 
 def folder_create(timestamp):
     #create folder with timestamp, save readme file

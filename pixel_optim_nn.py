@@ -137,7 +137,7 @@ class TopNet(nn.Module):
 
         # softmax option, matches uw
         x = self.fc5(x)
-        x = 0.01 + torch.softmax(x, dim=1)
+        x = 0.001 + torch.softmax(x, dim=1)
         #print('x after softmax:',x[50:100,:])
         x = x[:, 0].view(-1)
         #print('rho at end:',x.shape)
@@ -310,6 +310,8 @@ class Labels():
     
     
     def __init__(self,perfnn):
+        """
+        """
         
         self.label_center = torch.tensor(perfnn.label_centering_factor)
         self.label_denom = torch.tensor(perfnn.label_denom_factor)
@@ -386,10 +388,13 @@ class TopOpt():
         elif symmetric == True:
             self.input_xy = self.gen_xy_sym().to(device)
         
-        print(self.input_xy.shape)
+        #print(self.input_xy.shape)
         
         #lock down perfnn
-        self.perfnn.requires_grad_(False) #need to verify this works
+        #self.perfnn.requires_grad_(False) #need to verify this works, doesn't appear to
+        self.perfnn.requires_grad = False
+        for param in self.perfnn.parameters():
+            param.requires_grad = False
         
         #initialize topnet
         self.top_net = TopNet(self.image_shape, (1.,1.), vary_thk)#(0.5, 0.49))
@@ -431,8 +436,8 @@ class TopOpt():
         """
         C,H,W = self.image_shape
         
-        x_loc = [i/W for i in range(W)]
-        y_loc = [i/H for i in range(H)]
+        x_loc = [i/W for i in range(1,W+1)]
+        y_loc = [i/H for i in range(1,H+1)]
 
         # need grid combo, not just all points
         combined_xy = [[x, y] for x in x_loc for y in y_loc]
@@ -443,7 +448,8 @@ class TopOpt():
         #generates indices for upper triangle
         C,H,W = self.image_shape
         xy = np.triu_indices(H/2)
-        combined_xy = [i for i in zip((xy[0]/H/2).tolist(),(xy[1]/H/2).tolist())]
+        
+        combined_xy = [i for i in zip(((xy[0]+1)/H/2).tolist(),((xy[1]+1)/H/2).tolist())]
         
         return torch.tensor(combined_xy)
 
@@ -497,7 +503,7 @@ class TopOpt():
         
         pred_ext_ratio, pred_ins_loss = dB_response(pred_Tr_ins, pred_Tr_met)
         
-        loss = (30-pred_ext_ratio) + (pred_ins_loss-3)
+        loss = torch.square(30-pred_ext_ratio) + torch.square(pred_ins_loss-3)
         
         
         error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
@@ -519,11 +525,13 @@ class TopOpt():
         C,H,W = self.image_shape
         target = self.top_net.weightx*float(initial_density)*torch.ones(1,int(H),int(W)) #density funct is 1 channel only
         target = target[None]
+        #print(target)
         
         for i in range(num_epochs):
             images = self.top_net(self.input_xy, 1,symmetric=True)
             images = images[None]
             loss = ((target-images)**2).sum()
+            
             
             if i % 100 == 0:
                 print("pretrain loss: ",loss)
@@ -546,6 +554,7 @@ class TopOpt():
 
         self.perfnn.eval()  #set perf_net to eval mode
         self.top_net.train() #top_net is training (influences dropout)
+
 
         alpha = alpha_0
 
@@ -851,13 +860,13 @@ def main():
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .001, device, False, symmetric=True)
-    top_opt.set_targets(perfnn.label_names, 1,0,340)
+    top_opt.set_targets(perfnn.label_names, 1,0.001,340)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
-        top_opt.pretrain(pretrain_density,1000)
+        top_opt.pretrain(pretrain_density,5000)
     
-    top_opt.optimize(0,0,0,2000,1,0.005,1)
+    top_opt.optimize(0,0,0,5000,1,0.005,1)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
