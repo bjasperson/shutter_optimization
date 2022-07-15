@@ -66,7 +66,7 @@ class TopNet(nn.Module):
         self.bn3 = nn.BatchNorm1d(20)
         self.bn4 = nn.BatchNorm1d(20)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
-        self.fc1 = nn.Linear(2, 20)
+        self.fc1 = nn.Linear(2, 20) #(was 2,20)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc2 = nn.Linear(20, 20)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
@@ -79,8 +79,8 @@ class TopNet(nn.Module):
         
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0) #was 0.02
-        self.drop_layer4 = nn.Dropout(0) #was 0.02
+        self.drop_layer3 = nn.Dropout(0.02) #was 0.02
+        self.drop_layer4 = nn.Dropout(0.02) #was 0.02
         
         
         self.l_relu1 = nn.LeakyReLU(0) #was 0.1
@@ -112,13 +112,13 @@ class TopNet(nn.Module):
 
         #option w/ dropout, but not needed likely with batch norm added
         #prev had drop layer on all fc layers
-        x = self.l_relu1(self.drop_layer1(self.fc1(x)))
+        x = self.drop_layer1(self.l_relu1(self.fc1(x)))
         x = self.bn1(x)
-        x = self.l_relu2(self.drop_layer2(self.fc2(x)))
+        x = self.drop_layer2(self.l_relu2(self.fc2(x)))
         x = self.bn2(x)
-        x = self.l_relu3(self.drop_layer3(self.fc3(x)))
+        x = self.drop_layer3(self.l_relu3(self.fc3(x)))
         x = self.bn3(x)
-        x = self.l_relu4(self.drop_layer4(self.fc4(x)))
+        x = self.drop_layer4(self.l_relu4(self.fc4(x)))
         x = self.bn4(x)
 
         #option w/o dropout
@@ -145,25 +145,27 @@ class TopNet(nn.Module):
         #print('rho_mean = ',self.rho.mean())
         #x = self.batch_norm(x)
 
-        if symmetric==True:
-            #make symmetric
-            C,H,W = self.image_shape
-            #get corner, upper triangle
-            triu_indices = torch.triu_indices(H//2,W//2)
-            corner_image = torch.zeros((H//2,W//2))
-            corner_image[triu_indices[0],triu_indices[1]] = x
+        ###########
+        ##legacy code for x,y and xy symmetry
+        # if symmetric==True:
+        #     #make symmetric
+        #     C,H,W = self.image_shape
+        #     #get corner, upper triangle
+        #     triu_indices = torch.triu_indices(H//2,W//2)
+        #     corner_image = torch.zeros((H//2,W//2))
+        #     corner_image[triu_indices[0],triu_indices[1]] = x
             
-            #fill in corner (xy axis flip)
-            corner_image_diag = torch.zeros((H//2,W//2))
-            for i in range(H//2):
-                corner_image_diag[i,i] = corner_image.diag()[i]
+        #     #fill in corner (xy axis flip)
+        #     corner_image_diag = torch.zeros((H//2,W//2))
+        #     for i in range(H//2):
+        #         corner_image_diag[i,i] = corner_image.diag()[i]
             
-            corner_image = corner_image + corner_image.rot90().flip(0) - corner_image_diag
+        #     corner_image = corner_image + corner_image.rot90().flip(0) - corner_image_diag
 
-            #extend corner to all 4 quadrants
-            x = torch.concat((corner_image,corner_image.flip(1)),axis=1)
-            x = torch.concat((x,x.flip(0)),axis=0)
-
+        #     #extend corner to all 4 quadrants
+        #     x = torch.concat((corner_image,corner_image.flip(1)),axis=1)
+        #     x = torch.concat((x,x.flip(0)),axis=0)
+        ###########
             
 
         x = torch.reshape(x, (1, self.image_shape[1], self.image_shape[2]))
@@ -458,38 +460,7 @@ class TopOpt():
         #############################
         #legacy code, without db calc
         
-        # target = self.target_labels.labels
-        # pred = pred_perf.labels.reshape(-1)
-        # labels = self.perfnn.label_names
-        
-        # target_Tr_ins = target[labels.index('Tr_ins')]
-        # target_Tr_met = target[labels.index('Tr_met')]
-        # target_Temp = target[labels.index('Temp')]
-        
-        # pred_Tr_ins = pred[labels.index('Tr_ins')]
-        # pred_Tr_met = pred[labels.index('Tr_met')]
-        # pred_Temp = pred[labels.index('Temp')]
-        
-        
-        
-        # loss = ((pred_Tr_ins - target_Tr_ins)**2 
-        #                 + (pred_Tr_met - target_Tr_met)**2 
-        #                 )#+ (pred_Temp - target_Temp)**2)
-        
-        
-        # error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
-        #                abs(target_Tr_met - pred_Tr_met).detach().tolist(),
-        #                abs(target_Temp - pred_Temp).detach().tolist()]
-        
-        # error_terms_labels = ['Tr_ins','Tr_met','Temp']
-        
-        # # print("targets: Tr_ins, Tr_met, Temp: ", target_Tr_ins, target_Tr_met, target_Temp)
-        # # print("predicted: Tr_ins, Tr_met, Temp: ", pred_Tr_ins, pred_Tr_met, pred_Temp)
-        # # print("loss:",loss)
-        # return loss, error_terms, error_terms_labels
-        #############################
         target = self.target_labels.labels
-        pred_perf_in.scale_labels()
         pred = pred_perf_in.labels.reshape(-1)
         labels = self.perfnn.label_names
         
@@ -501,16 +472,49 @@ class TopOpt():
         pred_Tr_met = pred[labels.index('Tr_met')]
         pred_Temp = pred[labels.index('Temp')]
         
-        pred_ext_ratio, pred_ins_loss = dB_response(pred_Tr_ins, pred_Tr_met)
         
-        loss = torch.square(30-pred_ext_ratio) + torch.square(pred_ins_loss-3)
+        
+        loss = ((pred_Tr_ins - target_Tr_ins)**2 
+                        + (pred_Tr_met - target_Tr_met)**2 
+                        )#+ (pred_Temp - target_Temp)**2)
         
         
         error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
                         abs(target_Tr_met - pred_Tr_met).detach().tolist(),
                         abs(target_Temp - pred_Temp).detach().tolist()]
-    
+        
         error_terms_labels = ['Tr_ins','Tr_met','Temp']
+        
+        # print("targets: Tr_ins, Tr_met, Temp: ", target_Tr_ins, target_Tr_met, target_Temp)
+        # print("predicted: Tr_ins, Tr_met, Temp: ", pred_Tr_ins, pred_Tr_met, pred_Temp)
+        # print("loss:",loss)
+        return loss, error_terms, error_terms_labels
+        #############################
+        # #with db being used
+        # target = self.target_labels.labels
+        # pred_perf_in.scale_labels()
+        # pred = pred_perf_in.labels.reshape(-1)
+        # labels = self.perfnn.label_names
+        
+        # target_Tr_ins = target[labels.index('Tr_ins')]
+        # target_Tr_met = target[labels.index('Tr_met')]
+        # target_Temp = target[labels.index('Temp')]
+        
+        # pred_Tr_ins = pred[labels.index('Tr_ins')]
+        # pred_Tr_met = pred[labels.index('Tr_met')]
+        # pred_Temp = pred[labels.index('Temp')]
+        
+        # pred_ext_ratio, pred_ins_loss = dB_response(pred_Tr_ins, pred_Tr_met)
+        
+        # #loss = torch.square(30-pred_ext_ratio) + torch.square(pred_ins_loss-3)
+        # #loss = (30-pred_ext_ratio) + (pred_ins_loss-3)
+        
+        
+        # error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
+        #                 abs(target_Tr_met - pred_Tr_met).detach().tolist(),
+        #                 abs(target_Temp - pred_Temp).detach().tolist()]
+    
+        # error_terms_labels = ['Tr_ins','Tr_met','Temp']
         
         return loss, error_terms, error_terms_labels
 
@@ -635,16 +639,16 @@ class TopOpt():
         for i in range(len(labels)):
             print(labels[i], ':', pred_perf[i])
         print('--------')
-        print('unity check:')
-        print('ins: R_ins + Tr_ins + A_ins = ',
-              pred_perf[labels.index('R_ins')] +
-              pred_perf[labels.index('Tr_ins')] +
-              pred_perf[labels.index('A_ins')])
+        # print('unity check:')
+        # print('ins: R_ins + Tr_ins + A_ins = ',
+        #       pred_perf[labels.index('R_ins')] +
+        #       pred_perf[labels.index('Tr_ins')] +
+        #       pred_perf[labels.index('A_ins')])
 
-        print('met: R_met + Tr_met + A_met = ',
-              pred_perf[labels.index('R_met')] +
-              pred_perf[labels.index('Tr_met')] +
-              pred_perf[labels.index('A_met')])
+        # print('met: R_met + Tr_met + A_met = ',
+        #       pred_perf[labels.index('R_met')] +
+        #       pred_perf[labels.index('Tr_met')] +
+        #       pred_perf[labels.index('A_met')])
         
         ext_ratio, ins_loss = dB_response(pred_perf[labels.index('Tr_ins')],
                                           abs(pred_perf[labels.index('Tr_met')]))
@@ -859,14 +863,14 @@ def main():
     perfnn = load_perfnet(perf_nn_folder)
         
     #initilize top_opt
-    top_opt = TopOpt(perfnn, .001, device, False, symmetric=True)
+    top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
     top_opt.set_targets(perfnn.label_names, 1,0.001,340)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,5000)
     
-    top_opt.optimize(0,0,0,5000,1,0.005,1)
+    top_opt.optimize(0,0,0,7_000,1,3/7_000,4)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
@@ -890,6 +894,6 @@ def main():
 
 
 if __name__ == '__main__':
-    top_opt = main()
+    top_opt_out = main()
     
     

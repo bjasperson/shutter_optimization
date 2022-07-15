@@ -128,23 +128,19 @@ class Image():
         if input('generate gen2 param file for cluster+parametric sweep (y/n)?   ') == 'y':
             self.save_comsol_inputs_gen2(path, timestamp)
         
-        # if input('generate simulated results? y to gen/save:   ') == 'y':
-        #     if input('1) use random training image as ideal or 2) generate new image?    ') == '1':
-        #         target_image_id = int(0.67*self.images.shape[0])
-        #         target_image = feature_image[target_image_id][0]
-        #         print('target_image:\n',target_image)
-        #     else: 
-        #         target_image = random_gen_2(1, self.images.shape[2])[0,0]
-        #         print('target image:\n',target_image)
+        if input('generate (standard) simulated results? y to gen/save:   ') == 'y':
+            if input('1) use random training image as ideal or 2) generate new image?    ') == '1':
+                target_image_id = int(0.67*self.images.shape[0])
+                target_image = feature_image[target_image_id][0]
+                print('target_image:\n',target_image)
+            else: 
+                target_image = random_gen_2(1, self.images.shape[2])[0,0]
+                print('target image:\n',target_image)
             
-        #     target_image[target_image>0] = 1
-                
-        #     labels, fake_results = simulated_results(self.images,target_image)
-            
-            
-            
-            # np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '')
-            # np.save(os.path.join(path,'target_image'),target_image)
+            target_image[target_image>0] = 1
+            labels, fake_results = simulated_results(self.images,target_image)
+            np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '',delimiter=",")
+            np.save(os.path.join(path,'target_image'),target_image)
         
         if input('generate (symmetric) simulated results? y to gen/save:   ') == 'y':
             target_image, labels, fake_results = simulated_sym_results(self.images)
@@ -397,7 +393,7 @@ def simulated_results(images,ideal_image):
     out = np.array((R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp)).transpose()
     out[out==0] = 0.001
     
-    labels = 'R_ins R_met Tr_ins Tr_met A_ins A_met Temp'
+    labels = 'R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp'
     
     return labels, out
 

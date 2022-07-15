@@ -528,7 +528,7 @@ class Network9(Network):
         num_layers = input_data.num_channels
         num_labels = len(input_data.labels_names)
         
-        out_ch_conv1 = 128
+        out_ch_conv1 = 64
         k1 = kernel_size   
         p1 = kernel_size
         s1 = kernel_size
@@ -547,7 +547,7 @@ class Network9(Network):
         self.flatten = nn.Flatten()
         # an affine operation: y = Wx + b
         # fc implies "fully connected" because linear layers are also called fully connected
-        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv3**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv1**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         #self.fc1 = nn.Linear(num_layers*num_pixels_width**2, 100)  
         self.batch_norm1 = nn.BatchNorm1d(50)
         self.fc2 = nn.Linear(50, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
@@ -564,13 +564,13 @@ class Network9(Network):
         x = F.relu(x)
         x = self.batch_norm1c(x)
         
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.batch_norm2c(x)
+        # x = self.conv2(x)
+        # x = F.relu(x)
+        # x = self.batch_norm2c(x)
         
-        x = self.conv3(x)
-        x = F.relu(x)
-        x = self.batch_norm3c(x)
+        # x = self.conv3(x)
+        # x = F.relu(x)
+        # x = self.batch_norm3c(x)
         
         x = self.flatten(x)
                 

@@ -23,17 +23,14 @@ def main():
         df_results = import_results(results_folder)
         
         df_combined = combined_results(df_images,df_results)
-        df_combined,np_combined_images,df_combined_results = nn_config(df_combined)
-        save_results(base_folder, df_combined, np_combined_images, df_combined_results)
+        df_combined,np_combined_images,np_reduced_images,df_combined_results = nn_config(df_combined)
+        save_results(base_folder, df_combined, np_combined_images, np_reduced_images, df_combined_results)
     
     if input("analyze results (y/n)?  ")=="y":
         check = "df_combined_results" in locals() 
         if check == False:
             df_combined_results = pd.read_csv(base_folder+"combined_results/final_comsol_results.csv")
         
-                    
-
-
 
 def import_images(folder):
     
@@ -64,7 +61,7 @@ def import_results(folder):
         df = pd.concat([df,df_in])
         df = df.groupby("id").first()
     
-    return(df)
+    return df
 
 def analyze_results(file_path):
     #perform any analysis on results as needed
@@ -76,16 +73,16 @@ def combined_results(images,results):
     combined["ext_ratio"] = 10*np.log10(combined["Tr_ins"]/combined["Tr_met"])
     combined["insert_loss"] = 10*np.log10(1/combined["Tr_ins"])
     
-    return(combined)
+    return combined
 
 def nn_config(combined_df):
     #saves the combined feature_images.npy
     
     #temporarily remove any Tr_ins < 0.5 and ext_ratio < 0
-    print("WARNING: Tr_ins<0.5 and ext_ratio<0 removed")
-    combined_df = combined_df[combined_df["ext_ratio"]>0]
-    combined_df = combined_df[combined_df["Tr_ins"]>0.5]
-    combined_df = combined_df[combined_df["ext_ratio"]<19]
+    #print("WARNING: Tr_ins<0.5 and ext_ratio<0 removed")
+    #combined_df = combined_df[combined_df["ext_ratio"]>0]
+    #combined_df = combined_df[combined_df["Tr_ins"]>0.5]
+    #combined_df = combined_df[combined_df["ext_ratio"]<19]
     
     
     #clean up for numpy array
@@ -93,15 +90,20 @@ def nn_config(combined_df):
     np_images = [np_images[i] for i in range(len(np_images))]
     np_images = np.asarray(np_images)
     
+    #created reduced images (leverage symmetry)
+    N,C,H,W = np_images.shape
+    np_reduced_images = np_images[:,:,:H//2,:W//2]
+    
     #saves the combined csv: R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp
     np_results = combined_df[['R_ins','R_met','Tr_ins','Tr_met','A_ins','A_met','T_VO2_avg']]
     np_results = np_results.rename(columns={'T_VO2_avg':'Temp'})
     
-    return(combined_df,np_images,np_results)
+    return combined_df,np_images,np_reduced_images,np_results
 
-def save_results(path, df_all, np_images, df_results):
+def save_results(path, df_all, np_images, np_reduced_images, df_results):
     df_all.to_pickle(path + '/combined_results/df_all.pkl')
-    np.save(path + '/combined_results/feature_images',np_images)
+    np.save(path + '/combined_results/full_feature_images',np_images)
+    np.save(path + '/combined_results/feature_images',np_reduced_images)
     df_results.to_csv(path + '/combined_results/final_comsol_results.csv', index=False)
     
 

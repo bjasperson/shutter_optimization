@@ -58,8 +58,11 @@ class InputData():
         # ------------------
         # import image file (.py) and results file (.txt)
         # images
+        
         self.orig_images = np.load(
             self.data_dir + '/feature_images.npy').astype(np.float32)
+    
+                
 
         # ------------------
         # labels:
@@ -388,8 +391,8 @@ def main():
     # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
-    num_epochs = 100  # was 200
-    learning_rate = .0001  # was 0.001
+    num_epochs = 10  # was 200
+    learning_rate = .001  # was 0.001
     momentum = 0.87
 
     # device = 'cpu'#"cuda" if torch.cuda.is_available() else "cpu"
