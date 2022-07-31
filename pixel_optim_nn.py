@@ -473,10 +473,22 @@ class TopOpt():
         pred_Temp = pred[labels.index('Temp')]
         
         
+        #loss function notes:
+            #don't square, since targets are scaled already (negatives matter)
         
-        loss = ((pred_Tr_ins - target_Tr_ins)**2 
-                        + (pred_Tr_met - target_Tr_met)**2 
-                        )#+ (pred_Temp - target_Temp)**2)
+        loss = (torch.square((target_Tr_ins-pred_Tr_ins)/target_Tr_ins) + 
+                torch.square((pred_Tr_met-target_Tr_met)/target_Tr_met) + 
+                torch.square((target_Temp-pred_Temp)/target_Temp))
+        
+        # loss = ((pred_Tr_ins - target_Tr_ins)**2 
+        #                 + (pred_Tr_met - target_Tr_met)**2 
+        #                 + (pred_Temp - target_Temp)**2)
+        
+        # loss = torch.square((pred_Tr_ins - target_Tr_ins)/target_Tr_ins) 
+        # + torch.square((pred_Tr_met - target_Tr_met)/target_Tr_met)
+        # + torch.square((pred_Temp - target_Temp)/target_Temp)
+        
+        
         
         
         error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
@@ -869,13 +881,13 @@ def main():
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
-    top_opt.set_targets(perfnn.label_names, 0.51,0.001,282)
+    top_opt.set_targets(perfnn.label_names, 0.6,0.01,282)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,5000)
     
-    num_epochs = 10_000
+    num_epochs = 5_000
     p_max = 4
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()

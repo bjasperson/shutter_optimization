@@ -77,6 +77,8 @@ def analyze_results(file_path):
     df.plot('T_VO2_avg','q_applied',kind="scatter")
     df.plot("ext_ratio","T_VO2_avg",kind="scatter")
     df.plot("ext_ratio","insert_loss",kind="scatter")
+    df.hist("Tr_ins")
+    df.hist("Tr_met")
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
 
@@ -96,7 +98,7 @@ def nn_config(combined_df,readme):
         print("WARNING: Tr_ins<0.5 and ext_ratio<0 removed")
         combined_df = combined_df[combined_df["ext_ratio"]>0]
         combined_df = combined_df[combined_df["Tr_ins"]>0.5]
-        readme += 'removed Tr_ins < 0.5 and ext_ratio < 0'
+        readme += 'removed Tr_ins < 0.5 and ext_ratio < 0\n'
     ###combined_df = combined_df[combined_df["ext_ratio"]<19]
     
     
@@ -106,7 +108,7 @@ def nn_config(combined_df,readme):
     np_images = np.asarray(np_images)
     
     #created reduced images (leverage symmetry)
-    readme += "feature_images.py = upper left corner, full_feature_images.npy = full symmetric image"
+    readme += "feature_images.py = upper left corner, full_feature_images.npy = full symmetric image\n"
     N,C,H,W = np_images.shape
     np_reduced_images = np_images[:,:,:H//2,:W//2]
     
@@ -120,7 +122,7 @@ def save_results(path, df_all, np_images, np_reduced_images, df_results, readme)
     df_all.to_pickle(path + 'df_all.pkl')
     np.save(path + 'full_feature_images',np_images)
     np.save(path + 'feature_images',np_reduced_images)
-    df_results.to_csv(path + 'final_comsol_results.csv', index=False)
+    df_results.to_csv(path + 'final_comsol_results.csv', columns=['Tr_ins','Tr_met','Temp'], index=False)
     
     with open(os.path.join(path,'readme.txt'),'w') as output:
         output.write(readme)
