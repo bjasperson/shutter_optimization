@@ -351,7 +351,7 @@ def random_gen_3(N_pts,N_pixels_width):
     return rand_array
 
 def random_gen_4(N_pts,N_pixels_width):
-    """improved random gen with x, y and xy symmetry
+    """improved random gen with x and y symmetry
     only works for even N_pts for now
     """
     N_corner_width = int(N_pixels_width//2 + N_pixels_width%2)

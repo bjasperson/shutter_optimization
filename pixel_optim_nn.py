@@ -689,6 +689,11 @@ class TopOpt():
         # save image
         image = image_creation.Image()
         image.images = self.images.detach().numpy()[0][0]
+        
+        #make symmetric (base image is upper left corner)
+        image.images = np.concatenate((image.images,np.flip(image.images,0)),axis=0)
+        image.images = np.concatenate((image.images,np.flip(image.images,1)),axis=1)
+        
         H,W = image.images.shape
         name = path + '/optimized_design_' + timestamp + '.npy'
         np.save(name, image.images)
@@ -864,13 +869,15 @@ def main():
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
-    top_opt.set_targets(perfnn.label_names, 1,0.001,340)
+    top_opt.set_targets(perfnn.label_names, 0.51,0.001,282)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,5000)
     
-    top_opt.optimize(0,0,0,7_000,1,3/7_000,4)
+    num_epochs = 10_000
+    p_max = 4
+    top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()
         
     plt.plot(np.array(top_opt.loss))
