@@ -245,6 +245,8 @@ class Evaluate():
 
 #########################################################
 def train(dataloader, model, loss_fn, optimizer, device, train_error):
+    """
+    """
     #size = len(dataloader.dataset)
     model.train()
     train_loss = 0
@@ -279,6 +281,8 @@ def train(dataloader, model, loss_fn, optimizer, device, train_error):
 
 
 def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
+    """
+    """
     #size = len(dataloader.dataset)
     model.eval()
     test_loss = 0
@@ -413,7 +417,7 @@ def main():
                                label_norm_code=2)
 
     #network = perf_net.Network7(input_data,kernel_size = 3).to(device)
-    network = network_to_use(input_data, kernel_size=3).to(device)
+    network = network_to_use(input_data).to(device)
     network.network_name = network_name
 
     # print(network)
