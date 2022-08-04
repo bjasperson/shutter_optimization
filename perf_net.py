@@ -539,11 +539,11 @@ class Network9(Network):
         
         # input image channel, output channels, square convolution kernel
         self.conv1 = nn.Conv2d(in_channels = num_layers, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.conv2 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.conv3 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        #self.conv2 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        #self.conv3 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
         self.batch_norm1c = nn.BatchNorm2d(out_ch_conv1)
-        self.batch_norm2c = nn.BatchNorm2d(out_ch_conv1)
-        self.batch_norm3c = nn.BatchNorm2d(out_ch_conv1)
+        #self.batch_norm2c = nn.BatchNorm2d(out_ch_conv1)
+        #self.batch_norm3c = nn.BatchNorm2d(out_ch_conv1)
         self.flatten = nn.Flatten()
         # an affine operation: y = Wx + b
         # fc implies "fully connected" because linear layers are also called fully connected
@@ -578,6 +578,105 @@ class Network9(Network):
         #print("shape before fc1: ",x.shape)
         x = self.fc1(x) 
         x = F.relu(x)
+        x = self.batch_norm1(x)
+        
+        x = (self.fc2(x))
+        #x = self.fc1(x)
+
+        return x
+    
+    def num_flat_features(self, x):
+        size = x.size()[1:]  # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
+    
+#%%
+class Network10(Network):  
+    def __init__(self, input_data, kernel_size = 5): #was 512               
+        
+        super().__init__(input_data)
+        
+        num_pixels_width = input_data.num_pixels_width
+        num_layers = input_data.num_channels
+        num_labels = len(input_data.labels_names)
+        
+        out_ch_conv1 = 8
+        k1 = kernel_size   
+        p1 = kernel_size-1
+        s1 = 2#kernel_size-1
+        
+        size_after_conv1 = int((num_pixels_width-k1+2*p1)/s1 + 1)
+        size_after_conv2 = int((size_after_conv1-k1+2*p1)/s1 + 1)
+        size_after_conv3 = int((size_after_conv2-k1+2*p1)/s1 + 1)
+        size_after_conv4 = int((size_after_conv3-k1+2*p1)/s1 + 1)
+        
+        # input image channel, output channels, square convolution kernel
+        self.conv1 = nn.Conv2d(in_channels = num_layers, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        self.batch_norm1c = nn.BatchNorm2d(out_ch_conv1)
+        
+        self.conv2 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        self.batch_norm2c = nn.BatchNorm2d(out_ch_conv1)
+        
+        self.conv3 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        self.batch_norm3c = nn.BatchNorm2d(out_ch_conv1)
+        
+        self.conv4 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        self.batch_norm4c = nn.BatchNorm2d(out_ch_conv1)
+        
+        self.flatten = nn.Flatten()
+        # an affine operation: y = Wx + b
+        # fc implies "fully connected" because linear layers are also called fully connected
+        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv4**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        #self.fc1 = nn.Linear(num_layers*num_pixels_width**2, 100)  
+        self.batch_norm1 = nn.BatchNorm1d(50)
+        self.fc2 = nn.Linear(50, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        
+        
+        #dropout
+        self.drop_layer1 = nn.Dropout(0) 
+        self.drop_layer2 = nn.Dropout(0)
+        self.drop_layer3 = nn.Dropout(0) #was 0.02
+        self.drop_layer4 = nn.Dropout(0) #was 0.02
+        self.drop_layer5 = nn.Dropout(0) #was 0.02
+        
+        #initialization
+        # nn.init.kaiming_normal_(self.conv1.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.kaiming_normal_(self.conv2.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.kaiming_normal_(self.conv3.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
+
+    def forward(self, x):
+        # (1) input layer
+        x = x
+        #print("shape at input: ",x.shape)
+        
+        # reshaping before linear layers
+        #x = x.view(-1, self.num_flat_features(x))
+        x = self.conv1(x)
+        x = self.drop_layer1(F.relu(x))
+        x = self.batch_norm1c(x)
+        
+        x = self.conv2(x)
+        x = self.drop_layer2(F.relu(x))
+        x = self.batch_norm2c(x)
+        
+        x = self.conv3(x)
+        x = self.drop_layer3(F.relu(x))
+        x = self.batch_norm3c(x)
+        
+        x = self.conv4(x)
+        x = self.drop_layer4(F.relu(x))
+        x = self.batch_norm4c(x)
+        
+        x = self.flatten(x)
+                
+        # () output layer
+        #print("shape before fc1: ",x.shape)
+        x = self.fc1(x) 
+        x = self.drop_layer5(F.relu(x))
         x = self.batch_norm1(x)
         
         x = (self.fc2(x))
