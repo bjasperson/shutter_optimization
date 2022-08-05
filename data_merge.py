@@ -77,6 +77,7 @@ def analyze_results(file_path):
     df.plot('T_VO2_avg','q_applied',kind="scatter")
     df.plot("ext_ratio","T_VO2_avg",kind="scatter")
     df.plot("ext_ratio","insert_loss",kind="scatter")
+    df.plot("Tr_met","T_VO2_avg",kind="scatter")
     df.hist("Tr_ins")
     df.hist("Tr_met")
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
@@ -95,11 +96,13 @@ def nn_config(combined_df,readme):
     
     #temporarily remove any Tr_ins < 0.5 and ext_ratio < 0
     if input("remove Tr_ins<0.5 and ext_ratio<0? y/n:  ")=="y":
-        print("WARNING: Tr_ins<0.5 and ext_ratio<0 removed")
         combined_df = combined_df[combined_df["ext_ratio"]>0]
         combined_df = combined_df[combined_df["Tr_ins"]>0.5]
         readme += 'removed Tr_ins < 0.5 and ext_ratio < 0\n'
-    ###combined_df = combined_df[combined_df["ext_ratio"]<19]
+        
+    if input("keep Tr_met<0.2? y/n:  ")=="y":
+        combined_df = combined_df[combined_df["Tr_met"]<0.2]
+        readme += 'only kept Tr_met < 0.2\n'
     
     
     #clean up for numpy array

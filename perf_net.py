@@ -70,21 +70,125 @@ def rescale_thk(thk_in,stats):
         raise Exception("rescale not defined")
     
 
-def norm_labels(array,centering_factor,denom_factor):
-    if type(array) != np.ndarray:
-        raise Exception('norm_labels requires np array')
+# def norm_labels(array,centering_factor,denom_factor):
+#     if type(array) != np.ndarray:
+#         raise Exception('norm_labels requires np array')
     
 
-    return (array - centering_factor)/denom_factor
+#     return (array - centering_factor)/denom_factor
 
-
-def rescale_labels(array, centering_factor, denom_factor):
-    if type(array) != np.ndarray:
-        raise Exception('rescale_labels requires np array')
+# def rescale_labels(array, centering_factor, denom_factor):
+#     if type(array) != np.ndarray:
+#         raise Exception('rescale_labels requires np array')
         
-    return array*denom_factor + centering_factor
+#     return array*denom_factor + centering_factor
+
+
+def label_norm_factors(stats, df=torch.empty(1)):
+    if type(df) != torch.tensor:
+        raise Exception('input to label_norm_factors must be tensor')
+    code = stats['label_norm_code']
     
+
+    if code == []:
+        stats['denom_factor'] = 1
+        stats['centering_factor'] = 1
+
+    if code == 1:
+        stats['denom_factor'] = np.array(stats['std']).astype('float32')
+        stats['centering_factor'] = np.array(stats['mean']).astype('float32')
+
+    if code == 2:
+        stats['denom_factor'] = np.array(stats['max']).astype(
+            'float32') - np.array(stats['min']).astype('float32')
+        stats['centering_factor'] = np.array(stats['min']).astype('float32')
     
+    if code == 3:
+        stats['log(Tr_ins)_mean'] = np.log(df['Tr_ins'].mean())
+        stats['log(Tr_met)_mean'] = np.log(df['Tr_met'].mean())
+        stats['log(Tr_ins)_std'] = np.log(df['Tr_ins'].std())
+        stats['log(Tr_met)_std'] = np.log(df['Tr_met'].std())
+
+    return stats
+
+def norm_labels(labels_array, stats):
+    """takes np labels array and stats, returns normalized labels.
+    
+    Must add rescale_labels counterpart as well
+    """
+    if type(labels_array) != torch.Tensor:
+        raise Exception('norm_labels requires torch.Tensor')
+    code = stats['label_norm_code']
+    names = stats['labels']
+
+    if code == []:
+        #none
+        normed_labels = labels_array
+
+    if code == 1:
+        #mean/stdev (astype 'float32'?)
+        denom_factor = torch.tensor(stats['std'])
+        centering_factor = torch.tensor(stats['mean'])
+        normed_labels = (labels_array - centering_factor)/denom_factor
+        
+    if code == 2:
+        #max-min
+        denom_factor = torch.tensor(stats['max']) - torch.tensor(stats['min'])
+        centering_factor = torch.tensor(stats['min'])
+        normed_labels = (labels_array - centering_factor)/denom_factor
+    
+    if code == 3:
+        normed_labels = torch.empty(labels_array.shape)
+        
+        i1 = names.index("Tr_ins")
+        i2 = names.index("Tr_met")
+        normed_labels[:,i1] = (torch.log(1/labels_array[:,i1]))
+        normed_labels[:,i2] = (torch.log(1/labels_array[:,i2]))
+        
+        i3 = names.index("Temp")
+        denom_factor = torch.tensor(stats['max']) - torch.tensor(stats['min'])
+        centering_factor = torch.tensor(stats['min'])
+        normed_labels[:,i3] = (labels_array[:,i3]-centering_factor[i3])/denom_factor[i3]      
+    
+    return normed_labels
+
+def rescale_labels(normed_labels, stats):
+    """
+    """
+    if type(normed_labels) != torch.Tensor:
+        raise Exception('rescale_labels requires torch.Tensor')
+    code = stats['label_norm_code']
+    names = stats['labels']
+    
+    if code == []:
+        rescaled_labels = normed_labels
+    
+    if code == 1:
+        #mean/stdev
+        denom_factor = torch.tensor(stats['std'])
+        centering_factor = torch.tensor(stats['mean'])
+        rescaled_labels = normed_labels*denom_factor + centering_factor
+        
+    if code == 2:
+        #max-min
+        denom_factor = torch.tensor(stats['max']) - torch.tensor(stats['min'])
+        centering_factor = torch.tensor(stats['min'])
+        rescaled_labels = normed_labels*denom_factor + centering_factor
+    
+    if code == 3:
+        rescaled_labels = torch.empty(normed_labels.shape)
+        i1 = names.index("Tr_ins")
+        i2 = names.index("Tr_met")
+        rescaled_labels[:,i1] = (torch.exp(-normed_labels[:,i1]))
+        rescaled_labels[:,i2] = (torch.exp(-normed_labels[:,i2]))
+        
+        i3 = names.index("Temp")
+        denom_factor = torch.tensor(stats['max']) - torch.tensor(stats['min'])
+        centering_factor = torch.tensor(stats['min'])
+        rescaled_labels[:,i3] = normed_labels[:,i3]*denom_factor[i3] + centering_factor[i3]
+    
+    return rescaled_labels
+
 
 class Network(nn.Module):
     
@@ -95,8 +199,8 @@ class Network(nn.Module):
         self.label_stats = input_data.label_stats
         #self.image_centering_factor = input_data.image_centering_factor
         #self.image_denom_factor = input_data.image_denom_factor
-        self.label_centering_factor = input_data.label_centering_factor
-        self.label_denom_factor = input_data.label_denom_factor
+        #self.label_centering_factor = input_data.label_centering_factor
+        #self.label_denom_factor = input_data.label_denom_factor
         self.label_names = input_data.labels_names
 
 class Network1a(nn.Module):  
@@ -602,7 +706,7 @@ class Network10(Network):
         num_layers = input_data.num_channels
         num_labels = len(input_data.labels_names)
         
-        out_ch_conv1 = 8
+        out_ch_conv1 = 16
         k1 = kernel_size   
         p1 = kernel_size-1
         s1 = 2#kernel_size-1
@@ -628,7 +732,7 @@ class Network10(Network):
         self.flatten = nn.Flatten()
         # an affine operation: y = Wx + b
         # fc implies "fully connected" because linear layers are also called fully connected
-        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv4**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv1**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         #self.fc1 = nn.Linear(num_layers*num_pixels_width**2, 100)  
         self.batch_norm1 = nn.BatchNorm1d(50)
         self.fc2 = nn.Linear(50, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
@@ -659,17 +763,17 @@ class Network10(Network):
         x = self.drop_layer1(F.relu(x))
         x = self.batch_norm1c(x)
         
-        x = self.conv2(x)
-        x = self.drop_layer2(F.relu(x))
-        x = self.batch_norm2c(x)
+        # x = self.conv2(x)
+        # x = self.drop_layer2(F.relu(x))
+        # x = self.batch_norm2c(x)
         
-        x = self.conv3(x)
-        x = self.drop_layer3(F.relu(x))
-        x = self.batch_norm3c(x)
+        # x = self.conv3(x)
+        # x = self.drop_layer3(F.relu(x))
+        # x = self.batch_norm3c(x)
         
-        x = self.conv4(x)
-        x = self.drop_layer4(F.relu(x))
-        x = self.batch_norm4c(x)
+        # x = self.conv4(x)
+        # x = self.drop_layer4(F.relu(x))
+        # x = self.batch_norm4c(x)
         
         x = self.flatten(x)
                 

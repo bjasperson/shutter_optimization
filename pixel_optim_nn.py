@@ -314,9 +314,7 @@ class Labels():
     def __init__(self,perfnn):
         """
         """
-        
-        self.label_center = torch.tensor(perfnn.label_centering_factor)
-        self.label_denom = torch.tensor(perfnn.label_denom_factor)
+        self.label_stats = perfnn.label_stats
         
     def label_update(self,label_tf, state):
         """assign updated labels
@@ -338,7 +336,7 @@ class Labels():
         None.
 
         """
-        if type(label_tf) == False:
+        if type(label_tf) != torch.Tensor:
             raise Exception('label must be tensor')
 
         
@@ -348,17 +346,17 @@ class Labels():
             raise Exception('state must be normalized or real')
         
             
-        self.labels = label_tf
+        self.labels = label_tf.reshape((1,-1)) #reshape for perfnet 
         self.state = state
         
     def normalize_labels(self):
         if self.state == 'real':
-            self.labels = (self.labels-self.label_center)/self.label_denom
+            self.labels = perf_net.norm_labels(self.labels,self.label_stats)
             self.state = 'normalized'
         
     def scale_labels(self):
         if self.state == 'normalized':
-            self.labels = (self.labels*self.label_denom + self.label_center)
+            self.labels = perf_net.rescale_labels(self.labels,self.label_stats)
             self.state = 'real'
         
     #add function to convert back and forth
@@ -461,16 +459,16 @@ class TopOpt():
         #legacy code, without db calc
         
         target = self.target_labels.labels
-        pred = pred_perf_in.labels.reshape(-1)
+        pred = pred_perf_in.labels
         labels = self.perfnn.label_names
         
-        target_Tr_ins = target[labels.index('Tr_ins')]
-        target_Tr_met = target[labels.index('Tr_met')]
-        target_Temp = target[labels.index('Temp')]
+        target_Tr_ins = target[0,labels.index('Tr_ins')]
+        target_Tr_met = target[0,labels.index('Tr_met')]
+        target_Temp = target[0,labels.index('Temp')]
         
-        pred_Tr_ins = pred[labels.index('Tr_ins')]
-        pred_Tr_met = pred[labels.index('Tr_met')]
-        pred_Temp = pred[labels.index('Temp')]
+        pred_Tr_ins = pred[0,labels.index('Tr_ins')]
+        pred_Tr_met = pred[0,labels.index('Tr_met')]
+        pred_Temp = pred[0,labels.index('Temp')]
         
         
         #loss function notes:
@@ -589,7 +587,8 @@ class TopOpt():
             
             images = self.top_net(self.input_xy, p_set, symmetric=self.symmetric)  # tensor [N_batch,2]
             images = images[None]  # adds axis, [1,2,20,20]
-            predicted_perf.label_update(self.perfnn(images), 'normalized')
+            pred_label = self.perfnn(images)
+            predicted_perf.label_update(pred_label, 'normalized')
             
             #this is my current "best guess"
             objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
@@ -784,6 +783,15 @@ def dB_response(Tr_ins,Tr_met):
     
     return(extinction_ratio,insertion_loss)
 
+def dB_to_tr_goals(ext_ratio, insert_loss):
+    """convert dB goals to Tr
+    """
+    Tr_ins_goal = 1/10**(insert_loss/10)
+    Tr_met_goal = Tr_ins_goal/(10**(ext_ratio/10))
+    
+    
+    return Tr_ins_goal, Tr_met_goal
+
 def plot_error(error_terms, error_labels, y_limit = None):
     error_terms = np.array(error_terms)
     for i in range(len(error_labels)):
@@ -881,7 +889,8 @@ def main():
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
-    top_opt.set_targets(perfnn.label_names, 0.6,0.01,282)
+    tr_ins_goal, tr_met_goal = dB_to_tr_goals(14, 2)
+    top_opt.set_targets(perfnn.label_names, tr_ins_goal, tr_met_goal, 283)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")

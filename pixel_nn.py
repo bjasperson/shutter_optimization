@@ -120,20 +120,23 @@ class InputData():
         self.label_stats['label_norm_code'] = label_norm_code
         self.label_stats['labels'] = self.labels_names
 
-        label_centering_factor, label_denom_factor = self.label_norm_factors()
-        self.label_centering_factor = label_centering_factor
-        self.label_denom_factor = label_denom_factor
+        #label_centering_factor, label_denom_factor = self.label_norm_factors()
+        #self.label_centering_factor = label_centering_factor
+        #self.label_denom_factor = label_denom_factor
 
-        labels_train_normed = perf_net.norm_labels(
-            labels_train, label_centering_factor, label_denom_factor)
-        labels_test_normed = perf_net.norm_labels(
-            labels_test, label_centering_factor, label_denom_factor)
+        # labels_train_normed = perf_net.norm_labels(
+        #     labels_train, label_centering_factor, label_denom_factor)
+        # labels_test_normed = perf_net.norm_labels(
+        #     labels_test, label_centering_factor, label_denom_factor)
 
-        labels_train_tf = torch.tensor(labels_train_normed)
-        labels_test_tf = torch.tensor(labels_test_normed)
+        labels_train_tf = torch.tensor(labels_train)
+        labels_test_tf = torch.tensor(labels_test)
+        
+        labels_train_normed_tf = perf_net.norm_labels(labels_train_tf,self.label_stats)
+        labels_test_normed_tf = perf_net.norm_labels(labels_test_tf,self.label_stats)
 
-        train_dataset = TensorDataset(images_train_tf, labels_train_tf)
-        test_dataset = TensorDataset(images_test_tf, labels_test_tf)
+        train_dataset = TensorDataset(images_train_tf, labels_train_normed_tf)
+        test_dataset = TensorDataset(images_test_tf, labels_test_normed_tf)
 
         #################################
         # create dataloaders
@@ -172,32 +175,15 @@ class InputData():
 
         return stats
 
-    def label_norm_factors(self):
-        stats = self.label_stats
-        code = stats['label_norm_code']
 
-        if code == []:
-            denom_factor = 1
-            centering_factor = 1
-
-        if code == 1:
-            denom_factor = np.array(stats['std']).astype('float32')
-            centering_factor = np.array(stats['mean']).astype('float32')
-            pass
-
-        if code == 2:
-            denom_factor = np.array(stats['max']).astype(
-                'float32') - np.array(stats['min']).astype('float32')
-            centering_factor = np.array(stats['min']).astype('float32')
-            pass
-
-        return centering_factor, denom_factor
 
 
 # %%
 class Evaluate():
 
     def __init__(self, eval_dataloader, network):
+        """
+        """
         self.eval_dataloader = eval_dataloader
         self.network = network
 
@@ -207,29 +193,31 @@ class Evaluate():
             preds_all, error_all, labels_all = get_all_preds(
                 self.eval_dataloader, self.network, device)
 
-        preds_all = preds_all.cpu().numpy()
-        labels_all = labels_all.cpu().numpy()
+        # preds_all = preds_all.cpu().numpy()
+        # labels_all = labels_all.cpu().numpy()
 
-        preds_all_rescaled = perf_net.rescale_labels(preds_all,
-                                                     self.network.label_centering_factor,
-                                                     self.network.label_denom_factor)
+        # preds_all_rescaled = perf_net.rescale_labels(preds_all,
+        #                                              self.network.label_centering_factor,
+        #                                              self.network.label_denom_factor)
 
-        labels_all_rescaled = perf_net.rescale_labels(labels_all,
-                                                      self.network.label_centering_factor,
-                                                      self.network.label_denom_factor)
+        preds_all_rescaled = perf_net.rescale_labels(preds_all, self.network.label_stats)
+        preds_all_rescaled = preds_all_rescaled.cpu().numpy()
 
+        labels_all_rescaled = perf_net.rescale_labels(labels_all,self.network.label_stats)
+        labels_all_rescaled = labels_all_rescaled.cpu().numpy()
+                                                      
         self.predictions = preds_all_rescaled
         self.actual_values = labels_all_rescaled
 
     def pred_report(self):
         self.diff = abs(self.predictions - self.actual_values)
-        self.error = self.diff/self.actual_values
+        self.error = abs(self.diff)/self.actual_values
 
         print('labels:', self.network.label_names)
         print('average abs(preds-labels):', self.diff.mean(axis=0))
         print('max abs(preds-labels):', self.diff.max(axis=0))
         print('min abs(preds-labels):', self.diff.min(axis=0))
-        print('average error [%]:', self.error.mean(axis=0)*100)
+        print('average abs error [%]:', self.error.mean(axis=0)*100)
         print('\n')
 
     def plot_results(self):
