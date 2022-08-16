@@ -65,26 +65,31 @@ class TopNet(nn.Module):
         self.bn4 = nn.BatchNorm1d(20)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc1 = nn.Linear(2, 20) #(was 2,20)
+        nn.init.xavier_normal_(self.fc1.weight) #from TOuNN.py
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc2 = nn.Linear(20, 20)
+        nn.init.xavier_normal_(self.fc2.weight)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc3 = nn.Linear(20, 20)
+        nn.init.xavier_normal_(self.fc3.weight)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc4 = nn.Linear(20, 20)
+        nn.init.xavier_normal_(self.fc4.weight)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         # self.fc5 = nn.Linear(20, 1) #use with sigmoid option
         self.fc5 = nn.Linear(20, 2)  # use with softmax option
+        nn.init.xavier_normal_(self.fc5.weight)
         
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0.02) #was 0.02
-        self.drop_layer4 = nn.Dropout(0.02) #was 0.02
+        self.drop_layer3 = nn.Dropout(0) #was 0.02
+        self.drop_layer4 = nn.Dropout(0) #was 0.02
         
         
-        self.l_relu1 = nn.LeakyReLU(0) #was 0.1
-        self.l_relu2 = nn.LeakyReLU(0)
-        self.l_relu3 = nn.LeakyReLU(0)
-        self.l_relu4 = nn.LeakyReLU(0)
+        self.l_relu1 = nn.LeakyReLU(0.1) #was 0.1
+        self.l_relu2 = nn.LeakyReLU(0.1)
+        self.l_relu3 = nn.LeakyReLU(0.1)
+        self.l_relu4 = nn.LeakyReLU(0.1)
 
         # INITIALIZE WEIGHTS FOR LAYER THICKNESS
         # ref: https://discuss.pytorch.org/t/multiply-parameter-by-a-parameter-in-computation-graph/20401
@@ -169,13 +174,13 @@ class TopNet(nn.Module):
         x = x**p_set*self.weightx  
         return x
 
-    def num_flat_features(self, x):
-        # changed to 0 b/c I don't have batches[1:]  # all dimensions except the batch dimension
-        size = x.size()[0:]
-        num_features = 1
-        for s in size:
-            num_features *= s
-        return num_features
+    # def num_flat_features(self, x):
+    #     # changed to 0 b/c I don't have batches[1:]  # all dimensions except the batch dimension
+    #     size = x.size()[0:]
+    #     num_features = 1
+    #     for s in size:
+    #         num_features *= s
+    #     return num_features
 
 
 # %% legacy CustLoss class
@@ -361,6 +366,8 @@ class TopOpt():
     pre-trained performance network and TopOpt topology neural network.
     """
     def __init__(self, perfnn, learning_rate, device, vary_thk, symmetric=False):
+        """initialize TopOpt
+        """
         self.perfnn = perfnn
         self.learning_rate = learning_rate
         self.device = device
@@ -392,10 +399,10 @@ class TopOpt():
         
 
         
-        # self.optimizer = optim.Adam(
-        #     self.top_net.parameters(), lr=self.learning_rate, weight_decay=1e-5)
+        self.optimizer = optim.Adam(
+            self.top_net.parameters(), amsgrad=True, lr=self.learning_rate)#, weight_decay=1e-5)
         
-        self.optimizer = optim.SGD(self.top_net.parameters(), lr=self.learning_rate, momentum=0.6) #from pytorch tutorial
+        #self.optimizer = optim.SGD(self.top_net.parameters(), lr=self.learning_rate, momentum=0.6) #from pytorch tutorial
 
         
     def set_targets(self, labels, target_ext_ratio, target_insert_loss, target_temp):
@@ -438,14 +445,14 @@ class TopOpt():
 
         return torch.tensor(combined_xy)#, requires_grad=True)
     
-    def gen_xy_sym(self):
-        #generates indices for upper triangle
-        C,H,W = self.image_shape
-        xy = np.triu_indices(H/2)
+    # def gen_xy_sym(self):
+    #     #generates indices for upper triangle
+    #     C,H,W = self.image_shape
+    #     xy = np.triu_indices(H/2)
         
-        combined_xy = [i for i in zip(((xy[0]+1)/H/2).tolist(),((xy[1]+1)/H/2).tolist())]
+    #     combined_xy = [i for i in zip(((xy[0]+1)/H/2).tolist(),((xy[1]+1)/H/2).tolist())]
         
-        return torch.tensor(combined_xy)
+    #     return torch.tensor(combined_xy)
 
 
     def cust_loss(self, pred_perf_in, alpha):
@@ -574,6 +581,8 @@ class TopOpt():
 
         p_set = p_init
         
+
+        
         for i in range(max_epochs):
                 
             # forward pass to obtain predicted images
@@ -581,6 +590,8 @@ class TopOpt():
             
             images = self.top_net(self.input_xy, p_set, symmetric=self.symmetric)  # tensor [N_batch,2]
             images = images[None]  # adds axis, [1,2,20,20]
+            if i == 0:
+                self.plot_images(images, 'initial image')
             pred_label = self.perfnn(images)
             predicted_perf.label_update(pred_label, 'normalized')
             
@@ -590,7 +601,8 @@ class TopOpt():
             #backpropogation
             self.optimizer.zero_grad()
             loss = objective  # + alpha*pow(vol_constraint,2)
-            loss.backward()
+            loss.backward(retain_graph=True)
+            #torch.nn.utils.clip_grad_norm_(self.top_net.parameters(),0.1)
             self.optimizer.step()
 
             error_terms.append(error_terms_in)
@@ -656,8 +668,8 @@ class TopOpt():
         #       pred_perf[labels.index('A_met')])
         
 
-        print('Extinction ratio (goal: > 30 dB): ',pred_perf[labels.index('ext_ratio')])
-        print('Insertion loss (goal: < 3 dB): ',pred_perf[labels.index('insert_loss')])
+        # print('Extinction ratio (goal: > 30 dB): ',pred_perf[labels.index('ext_ratio')])
+        # print('Insertion loss (goal: < 3 dB): ',pred_perf[labels.index('insert_loss')])
     
 
     def rescale_thk(self, np_array):
@@ -749,41 +761,41 @@ def load_perfnet(folder):
 #     return image_stats_in, label_stats_in
 #%%
 
-def dB_response(Tr_ins,Tr_met):   
-    '''Calculates extinction ratio and insertion loss
+# def dB_response(Tr_ins,Tr_met):   
+#     '''Calculates extinction ratio and insertion loss
     
 
-    Parameters
-    ----------
-    Tr_ins : TORCH.TENSOR, NP.ARRAY OR INT
-        INSULATING TRANSMITTANCE
-    Tr_met : TORCH.TENSOR, NP.ARRAY OR INT
-        METALLIC TRANSMITTANCE
+#     Parameters
+#     ----------
+#     Tr_ins : TORCH.TENSOR, NP.ARRAY OR INT
+#         INSULATING TRANSMITTANCE
+#     Tr_met : TORCH.TENSOR, NP.ARRAY OR INT
+#         METALLIC TRANSMITTANCE
 
-    Returns
-    -------
-    extinction_ratio
-    insertion_loss
+#     Returns
+#     -------
+#     extinction_ratio
+#     insertion_loss
 
-    '''
+#     '''
         
-    if torch.is_tensor(Tr_ins) or torch.is_tensor(Tr_met) == True:
-        extinction_ratio = 10*torch.log10(Tr_ins/Tr_met)
-        insertion_loss = 10*torch.log10(1/Tr_ins)
-    else:
-        extinction_ratio = 10*np.log10(Tr_ins/Tr_met)
-        insertion_loss = 10*np.log10(1/Tr_ins)
+#     if torch.is_tensor(Tr_ins) or torch.is_tensor(Tr_met) == True:
+#         extinction_ratio = 10*torch.log10(Tr_ins/Tr_met)
+#         insertion_loss = 10*torch.log10(1/Tr_ins)
+#     else:
+#         extinction_ratio = 10*np.log10(Tr_ins/Tr_met)
+#         insertion_loss = 10*np.log10(1/Tr_ins)
     
-    return(extinction_ratio,insertion_loss)
+#     return(extinction_ratio,insertion_loss)
 
-def dB_to_tr_goals(ext_ratio, insert_loss):
-    """convert dB goals to Tr
-    """
-    Tr_ins_goal = 1/10**(insert_loss/10)
-    Tr_met_goal = Tr_ins_goal/(10**(ext_ratio/10))
+# def dB_to_tr_goals(ext_ratio, insert_loss):
+#     """convert dB goals to Tr
+#     """
+#     Tr_ins_goal = 1/10**(insert_loss/10)
+#     Tr_met_goal = Tr_ins_goal/(10**(ext_ratio/10))
     
     
-    return Tr_ins_goal, Tr_met_goal
+#     return Tr_ins_goal, Tr_met_goal
 
 def plot_error(error_terms, error_labels, y_limit = None):
     error_terms = np.array(error_terms)
@@ -872,26 +884,28 @@ def main():
     perf_nn_folder = input('trained_model_[date] folder: ')
     #base_model_folder = '/home/jaspers2/Documents/pixel_optimization/dof_exploration/testing/220506-0710'
     
-    
     # only use during debugging (slows code)
     torch.autograd.set_detect_anomaly(True)
-    
     
     #load perf_nn
     perfnn = load_perfnet(perf_nn_folder)
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .001, device, False, symmetric=False)
+    
+    print('Trainable parameters:', sum(p.numel()
+          for p in top_opt.top_net.parameters() if p.requires_grad))
+    
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
-    top_opt.set_targets(perfnn.label_names, 10, 1, 320)
+    top_opt.set_targets(perfnn.label_names, 10, 1, 285)
     #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,5000)
     
-    num_epochs = 5_000
-    p_max = 1
+    num_epochs = 2_000
+    p_max = 3
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()
         

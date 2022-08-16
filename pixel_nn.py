@@ -223,6 +223,11 @@ class Evaluate():
             plt.ylabel('Predictions')
             plt.title(self.network.label_names[i])
             plt.grid()
+            
+            plt.figure()
+            plt.hist(self.error[:,i]*100)
+            plt.xlabel("Percent error")
+            plt.title(self.network.label_names[i])
 
 
 #########################################################
@@ -255,13 +260,10 @@ def train(dataloader, model, loss_fn, optimizer, device, train_error):
     train_loss /= batch_num
 
     train_error.append(train_loss)
-    print(f"Avg training loss: {train_loss:>7f}")
 
     return train_error
 
 #########################################################
-
-
 def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
     """
     """
@@ -290,7 +292,6 @@ def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
     test_error.append(test_loss)
     # correct /= size #legacy code from pytorch
     #print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    print(f"Avg test loss: {test_loss:>8f} \n")
 
     if error_flag == True:
         return(error_calc)
@@ -368,11 +369,11 @@ def save_model(input_data, network, data_directory):
 
 # %%
 def main(
-    num_epochs = 500,
+    num_epochs = 200,
     learning_rate = 0.001,
-    out_chnl = [10,8,5],
+    out_chnl = [10,10,10],
     kernel_size = [3,3,3],
-    stride_size = [2,2,2],
+    stride_size = [1,1,1],
     padding_size = [1,1,1],
     n_batch_in = 2**8 #was 2**3
     ):
@@ -386,7 +387,7 @@ def main(
     # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
-    momentum = 0.87
+    
 
     # device = 'cpu'#"cuda" if torch.cuda.is_available() else "cpu"
     if use_gpu == True:
@@ -416,20 +417,25 @@ def main(
     # print("conv1's weight: ",params[0].size())  # conv1's .weight
     print('Trainable parameters:', sum(p.numel()
           for p in network.parameters() if p.requires_grad))
-
+    print('---------------------------')
+    
     optimizer_in = optim.Adam(network.parameters(),
                               lr=learning_rate)  # from deeplizard
+    #momentum = 0.87
     #optimizer_in = optim.SGD(network.parameters(), lr=learning_rate, momentum=momentum) #from pytorch tutorial
     loss_fn_in = nn.MSELoss()  # MSE seems appropriate for continuous label
     test_error = []
     train_error = []
 
     for t in range(num_epochs):
-        print(f"Epoch {t+1}\n-------------------------------")
         train_error = train(input_data.train_dataloader, network,
                             loss_fn_in, optimizer_in, device, train_error)
         test_error = test(input_data.test_dataloader, network,
                           loss_fn_in, device, test_error, error_flag=False)
+        if (t+1)%10 == 0:
+            print(f"Epoch {t+1}\n-------------------------------")
+            print(f"Avg training loss: {train_error[-1]:>7f}")
+            print(f"Avg test loss: {test_error[-1]:>8f} \n")
     print("Done!")
 
     ########################################################

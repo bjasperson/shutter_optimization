@@ -730,14 +730,19 @@ class Network10(Network):
                                    stride_size[i],
                                    padding_size[i],
                                    bias=False)
+            
+            #pool_layer = nn.MaxPool2d(2,stride=1)
             batch_layer = nn.BatchNorm2d(out_chnl[i])
-            prev_layer_size = out_chnl[i]
-            size = int((prev_size-kernel_size[i]+2*padding_size[i])/stride_size[i] + 1)
-            print(f"layer {i} size: {size}")
-            prev_size = size
+            
+            conv_out_size = int((prev_size-kernel_size[i]+2*padding_size[i])/stride_size[i] + 1)
+            #pool_out_size = int((conv_out_size+2*0-1*(2-1)-1)/1 + 1)
+            print(f"layer {i} output size: {conv_out_size}")
+            prev_size = conv_out_size
             self.nn_layers.append(next_layer)
-            self.nn_layers.append(batch_layer)
-        
+            #self.nn_layers.append(pool_layer) #don't think this helps
+            #self.nn_layers.append(batch_layer) #commenting out temporarilty
+            prev_layer_size = out_chnl[i]
+            out_size = conv_out_size
         
         # input image channel, output channels, square convolution kernel
         # self.conv1 = nn.Conv2d(in_channels = num_layers, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
@@ -757,7 +762,7 @@ class Network10(Network):
         # fc implies "fully connected" because linear layers are also called fully connected
         #self.fc1 = nn.Linear(out_ch_conv1*size_after_conv1**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         #self.batch_norm1 = nn.BatchNorm1d(50)
-        self.fc1 = nn.Linear(out_chnl[-1]*size**2, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        self.fc1 = nn.Linear(out_chnl[-1]*out_size**2, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         
         
         #dropout
