@@ -112,7 +112,7 @@ def label_norm_factors(stats, df=torch.empty(1)):
     return stats
 
 def norm_labels(labels_array, stats):
-    """takes np labels array and stats, returns normalized labels.
+    """takes torch.Tensor labels array and stats, returns normalized labels.
     
     Must add rescale_labels counterpart as well
     """
@@ -123,7 +123,7 @@ def norm_labels(labels_array, stats):
 
     if code == []:
         #none
-        normed_labels = labels_array
+        raise Exception("missing label norm code")
 
     if code == 1:
         #mean/stdev (astype 'float32'?)
@@ -698,44 +698,66 @@ class Network9(Network):
     
 #%%
 class Network10(Network):  
-    def __init__(self, input_data, kernel_size = 5): #was 512               
-        
+    def __init__(self, input_data, out_chnl = [10], kernel_size = [3], stride_size = [3], padding_size = [3]): #was 512               
+        """
+        """
         super().__init__(input_data)
         
         num_pixels_width = input_data.num_pixels_width
         num_layers = input_data.num_channels
         num_labels = len(input_data.labels_names)
         
-        out_ch_conv1 = 16
-        k1 = kernel_size   
-        p1 = kernel_size-1
-        s1 = 2#kernel_size-1
+        # out_ch_conv1 = 10
+        # out_ch_conv2 = 5
+        # out_ch_conv3 = 5
+        # out_ch_conv4 = 5
+        # k1 = kernel_size[0]
+        # p1 = kernel_size[0]
+        # s1 = 3#kernel_size
         
-        size_after_conv1 = int((num_pixels_width-k1+2*p1)/s1 + 1)
-        size_after_conv2 = int((size_after_conv1-k1+2*p1)/s1 + 1)
-        size_after_conv3 = int((size_after_conv2-k1+2*p1)/s1 + 1)
-        size_after_conv4 = int((size_after_conv3-k1+2*p1)/s1 + 1)
+        # size_after_conv1 = int((num_pixels_width-k1+2*p1)/s1 + 1)
+        # size_after_conv2 = int((size_after_conv1-k1+2*p1)/s1 + 1)
+        # size_after_conv3 = int((size_after_conv2-k1+2*p1)/s1 + 1)
+        # size_after_conv4 = int((size_after_conv3-k1+2*p1)/s1 + 1)
+        
+        self.nn_layers = nn.ModuleList()
+        prev_layer_size = num_layers
+        prev_size = num_pixels_width
+        for i in range(len(out_chnl)):
+            next_layer = nn.Conv2d(prev_layer_size,
+                                   out_chnl[i],
+                                   kernel_size[i],
+                                   stride_size[i],
+                                   padding_size[i],
+                                   bias=False)
+            batch_layer = nn.BatchNorm2d(out_chnl[i])
+            prev_layer_size = out_chnl[i]
+            size = int((prev_size-kernel_size[i]+2*padding_size[i])/stride_size[i] + 1)
+            print(f"layer {i} size: {size}")
+            prev_size = size
+            self.nn_layers.append(next_layer)
+            self.nn_layers.append(batch_layer)
+        
         
         # input image channel, output channels, square convolution kernel
-        self.conv1 = nn.Conv2d(in_channels = num_layers, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.batch_norm1c = nn.BatchNorm2d(out_ch_conv1)
+        # self.conv1 = nn.Conv2d(in_channels = num_layers, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        # self.batch_norm1c = nn.BatchNorm2d(out_ch_conv1)
         
-        self.conv2 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.batch_norm2c = nn.BatchNorm2d(out_ch_conv1)
+        # self.conv2 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv2, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        # self.batch_norm2c = nn.BatchNorm2d(out_ch_conv2)
         
-        self.conv3 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.batch_norm3c = nn.BatchNorm2d(out_ch_conv1)
+        # self.conv3 = nn.Conv2d(in_channels = out_ch_conv2, out_channels = out_ch_conv3, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        # self.batch_norm3c = nn.BatchNorm2d(out_ch_conv3)
         
-        self.conv4 = nn.Conv2d(in_channels = out_ch_conv1, out_channels = out_ch_conv1, kernel_size = k1, padding=p1, stride=s1, bias=False) 
-        self.batch_norm4c = nn.BatchNorm2d(out_ch_conv1)
+        # self.conv4 = nn.Conv2d(in_channels = out_ch_conv3, out_channels = out_ch_conv4, kernel_size = k1, padding=p1, stride=s1, bias=False) 
+        # self.batch_norm4c = nn.BatchNorm2d(out_ch_conv4)
         
         self.flatten = nn.Flatten()
         # an affine operation: y = Wx + b
         # fc implies "fully connected" because linear layers are also called fully connected
-        self.fc1 = nn.Linear(out_ch_conv1*size_after_conv1**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
-        #self.fc1 = nn.Linear(num_layers*num_pixels_width**2, 100)  
-        self.batch_norm1 = nn.BatchNorm1d(50)
-        self.fc2 = nn.Linear(50, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        #self.fc1 = nn.Linear(out_ch_conv1*size_after_conv1**2, 50)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
+        #self.batch_norm1 = nn.BatchNorm1d(50)
+        self.fc1 = nn.Linear(out_chnl[-1]*size**2, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         
         
         #dropout
@@ -753,15 +775,13 @@ class Network10(Network):
         # nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x):
-        # (1) input layer
-        x = x
-        #print("shape at input: ",x.shape)
         
-        # reshaping before linear layers
-        #x = x.view(-1, self.num_flat_features(x))
-        x = self.conv1(x)
-        x = self.drop_layer1(F.relu(x))
-        x = self.batch_norm1c(x)
+        for i,layer in enumerate(self.nn_layers):
+            x = F.relu(layer(x))
+        
+        # x = self.conv1(x)
+        # x = self.drop_layer1(F.relu(x))
+        # x = self.batch_norm1c(x)
         
         # x = self.conv2(x)
         # x = self.drop_layer2(F.relu(x))
@@ -780,10 +800,10 @@ class Network10(Network):
         # () output layer
         #print("shape before fc1: ",x.shape)
         x = self.fc1(x) 
-        x = self.drop_layer5(F.relu(x))
-        x = self.batch_norm1(x)
+        #x = self.drop_layer5(F.relu(x))
+        #x = self.batch_norm1(x)
         
-        x = (self.fc2(x))
+        #x = (self.fc2(x))
         #x = self.fc1(x)
 
         return x

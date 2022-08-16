@@ -19,18 +19,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-
 from torch.utils.data import TensorDataset, DataLoader
 import matplotlib.pyplot as plt
 import datetime
 import os
 import pickle
-
 from sklearn.model_selection import train_test_split
-
 import perf_net
-
-
 #from ray import tune
 #from ray.tune.schedulers import ASHAScheduler
 
@@ -92,7 +87,6 @@ class InputData():
         print('import done')
 
     def create_datasets(self, test_perc, n_batch, image_norm_code=[], label_norm_code=[]):
-
         # split dataset into train and test
         images_train, images_test, labels_train, labels_test = train_test_split(
             self.orig_images, self.orig_labels, test_size=test_perc, shuffle=True)
@@ -110,8 +104,8 @@ class InputData():
             images_test, self.image_stats).astype('float32')
 
         # assign to torch tensor
-        images_train_tf = torch.tensor(images_train_normed)
-        images_test_tf = torch.tensor(images_test_normed)
+        images_train_normed_tf = torch.tensor(images_train_normed)
+        images_test_normed_tf = torch.tensor(images_test_normed)
 
         #################################
         # normalize responses
@@ -135,8 +129,8 @@ class InputData():
         labels_train_normed_tf = perf_net.norm_labels(labels_train_tf,self.label_stats)
         labels_test_normed_tf = perf_net.norm_labels(labels_test_tf,self.label_stats)
 
-        train_dataset = TensorDataset(images_train_tf, labels_train_normed_tf)
-        test_dataset = TensorDataset(images_test_tf, labels_test_normed_tf)
+        train_dataset = TensorDataset(images_train_normed_tf, labels_train_normed_tf)
+        test_dataset = TensorDataset(images_test_normed_tf, labels_test_normed_tf)
 
         #################################
         # create dataloaders
@@ -216,7 +210,7 @@ class Evaluate():
         print('labels:', self.network.label_names)
         print('average abs(preds-labels):', self.diff.mean(axis=0))
         print('max abs(preds-labels):', self.diff.max(axis=0))
-        print('min abs(preds-labels):', self.diff.min(axis=0))
+        #print('min abs(preds-labels):', self.diff.min(axis=0))
         print('average abs error [%]:', self.error.mean(axis=0)*100)
         print('\n')
 
@@ -373,8 +367,17 @@ def save_model(input_data, network, data_directory):
 
 
 # %%
-def main():
-
+def main(
+    num_epochs = 500,
+    learning_rate = 0.001,
+    out_chnl = [10,8,5],
+    kernel_size = [3,3,3],
+    stride_size = [2,2,2],
+    padding_size = [1,1,1],
+    n_batch_in = 2**8 #was 2**3
+    ):
+    """
+    """
     #######################
     # initial inputs
     data_dir = input('paste data directory:  ')
@@ -383,8 +386,6 @@ def main():
     # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
-    num_epochs = 20  # was 200
-    learning_rate = .001  # was 0.001
     momentum = 0.87
 
     # device = 'cpu'#"cuda" if torch.cuda.is_available() else "cpu"
@@ -400,12 +401,11 @@ def main():
 
     input_data = InputData(data_dir)
     input_data.create_datasets(test_perc=0.2,
-                               n_batch=2**3,
+                               n_batch=n_batch_in,
                                image_norm_code=1,
                                label_norm_code=2)
 
-    #network = perf_net.Network7(input_data,kernel_size = 3).to(device)
-    network = network_to_use(input_data).to(device)
+    network = network_to_use(input_data, out_chnl, kernel_size, stride_size, padding_size).to(device)
     network.network_name = network_name
 
     # print(network)
@@ -419,7 +419,7 @@ def main():
 
     optimizer_in = optim.Adam(network.parameters(),
                               lr=learning_rate)  # from deeplizard
-    # optimizer_in = optim.SGD(network.parameters(), lr=learning_rate, momentum=momentum) #from pytorch tutorial
+    #optimizer_in = optim.SGD(network.parameters(), lr=learning_rate, momentum=momentum) #from pytorch tutorial
     loss_fn_in = nn.MSELoss()  # MSE seems appropriate for continuous label
     test_error = []
     train_error = []

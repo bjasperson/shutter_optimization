@@ -12,13 +12,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
-
 import pickle
 import perf_net
 import importlib
-
 import matplotlib.pyplot as plt
-
 import image_creation
 
 plt.rcParams['figure.dpi'] = 150
@@ -45,7 +42,8 @@ class TopNet(nn.Module):
     # Returns two images with shape/normalized thickness as pixel values
 
     def __init__(self, image_shape, thk_init, vary_thk):
-
+        """
+        """
         super(TopNet, self).__init__()
         # super().__init__()
 
@@ -79,8 +77,8 @@ class TopNet(nn.Module):
         
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0.02) #was 0.02
-        self.drop_layer4 = nn.Dropout(0.02) #was 0.02
+        self.drop_layer3 = nn.Dropout(0) #was 0.02
+        self.drop_layer4 = nn.Dropout(0) #was 0.02
         
         
         self.l_relu1 = nn.LeakyReLU(0) #was 0.1
@@ -106,10 +104,6 @@ class TopNet(nn.Module):
         return torch.nn.Parameter(tensor_thk).requires_grad_(grad_setting)
 
     def forward(self, x, p_set,symmetric=False):
-        # reshaping before linear layers
-        #x = x.view(-1, self.num_flat_features(x))
-        #x = self.flatten(x)
-
         #option w/ dropout, but not needed likely with batch norm added
         #prev had drop layer on all fc layers
         x = self.drop_layer1(self.l_relu1(self.fc1(x)))
@@ -358,9 +352,6 @@ class Labels():
         if self.state == 'normalized':
             self.labels = perf_net.rescale_labels(self.labels,self.label_stats)
             self.state = 'real'
-        
-    #add function to convert back and forth
-    #add flag: scaled or normalized
     
 
 #%%
@@ -401,8 +392,10 @@ class TopOpt():
         
 
         
-        self.optimizer = optim.Adam(
-            self.top_net.parameters(), lr=self.learning_rate, weight_decay=1e-5)
+        # self.optimizer = optim.Adam(
+        #     self.top_net.parameters(), lr=self.learning_rate, weight_decay=1e-5)
+        
+        self.optimizer = optim.SGD(self.top_net.parameters(), lr=self.learning_rate, momentum=0.6) #from pytorch tutorial
 
     def set_targets(self, labels, target_tr_ins, target_tr_met, target_temp):
         """set targets for labels, Tr and Temp
@@ -472,10 +465,9 @@ class TopOpt():
         
         
         #loss function notes:
-            #don't square, since targets are scaled already (negatives matter)
         
-        loss = (torch.square((target_Tr_ins-pred_Tr_ins)/target_Tr_ins) + 
-                torch.square((pred_Tr_met-target_Tr_met)/target_Tr_met) + 
+        loss = (torch.square(torch.maximum(target_Tr_ins-pred_Tr_ins,torch.tensor(0))/target_Tr_ins) + 
+                torch.square(torch.maximum(pred_Tr_met-target_Tr_met,torch.tensor(0))/target_Tr_met) + 
                 torch.square((target_Temp-pred_Temp)/target_Temp))
         
         # loss = ((pred_Tr_ins - target_Tr_ins)**2 
@@ -889,8 +881,9 @@ def main():
         
     #initilize top_opt
     top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
-    tr_ins_goal, tr_met_goal = dB_to_tr_goals(14, 2)
-    top_opt.set_targets(perfnn.label_names, tr_ins_goal, tr_met_goal, 283)
+    tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
+    top_opt.set_targets(perfnn.label_names, tr_ins_goal, tr_met_goal, 285)
+    #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")

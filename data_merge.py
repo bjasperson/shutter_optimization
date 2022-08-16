@@ -11,6 +11,7 @@ import pandas as pd
 import os
 import image_creation
 
+
 def main():    
     #process input data, merge and create combined results
     if input("process input data (y/n)? ")=="y":
@@ -77,11 +78,24 @@ def analyze_results(file_path):
     df.plot('T_VO2_avg','q_applied',kind="scatter")
     df.plot("ext_ratio","T_VO2_avg",kind="scatter")
     df.plot("ext_ratio","insert_loss",kind="scatter")
+    df.plot("insert_loss","T_VO2_avg",kind="scatter")
     df.plot("Tr_met","T_VO2_avg",kind="scatter")
     df.hist("Tr_ins")
     df.hist("Tr_met")
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
+    
+    coverage = []
+    for i,image in enumerate(df["image"]):
+        total = sum(image[0].reshape(-1)>0)
+        coverage.append(total)
+    df["coverage"] = coverage
+
+    df.plot("coverage","Tr_ins",kind="scatter")
+    df.plot("coverage","Tr_met",kind="scatter")
+    df.plot("coverage","T_VO2_avg",kind="scatter")
+    
+        
 
 
 def combined_results(images,results):
