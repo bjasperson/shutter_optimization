@@ -84,9 +84,8 @@ def analyze_results(file_path):
     df.plot("ext_ratio","T_VO2_avg",kind="scatter")
     df.plot("ext_ratio","insert_loss",kind="scatter")
     df.plot("insert_loss","T_VO2_avg",kind="scatter")
-    df.plot("Tr_met","T_VO2_avg",kind="scatter")
-    df.hist("Tr_ins")
-    df.hist("Tr_met")
+    df.hist("ext_ratio")
+    df.hist("insert_loss")
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
     
@@ -96,8 +95,8 @@ def analyze_results(file_path):
         coverage.append(total)
     df["coverage"] = coverage
 
-    df.plot("coverage","Tr_ins",kind="scatter")
-    df.plot("coverage","Tr_met",kind="scatter")
+    df.plot("coverage","ext_ratio",kind="scatter")
+    df.plot("coverage","insert_loss",kind="scatter")
     df.plot("coverage","T_VO2_avg",kind="scatter")
     
 

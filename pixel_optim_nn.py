@@ -77,8 +77,8 @@ class TopNet(nn.Module):
         
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0) #was 0.02
-        self.drop_layer4 = nn.Dropout(0) #was 0.02
+        self.drop_layer3 = nn.Dropout(0.02) #was 0.02
+        self.drop_layer4 = nn.Dropout(0.02) #was 0.02
         
         
         self.l_relu1 = nn.LeakyReLU(0) #was 0.1
@@ -397,15 +397,16 @@ class TopOpt():
         
         self.optimizer = optim.SGD(self.top_net.parameters(), lr=self.learning_rate, momentum=0.6) #from pytorch tutorial
 
-    def set_targets(self, labels, target_tr_ins, target_tr_met, target_temp):
-        """set targets for labels, Tr and Temp
+        
+    def set_targets(self, labels, target_ext_ratio, target_insert_loss, target_temp):
+        """set targets for labels: ext_ratio, insert_loss and Temp
         """
         
         target_labels = Labels(self.perfnn)
         
         array = np.zeros(len(labels))
-        array[labels.index('Tr_ins')] = target_tr_ins
-        array[labels.index('Tr_met')] = target_tr_met
+        array[labels.index('ext_ratio')] = target_ext_ratio
+        array[labels.index('insert_loss')] = target_insert_loss
         array[labels.index('Temp')] = target_temp
         array_tf = torch.tensor(array)
         
@@ -455,20 +456,21 @@ class TopOpt():
         pred = pred_perf_in.labels
         labels = self.perfnn.label_names
         
-        target_Tr_ins = target[0,labels.index('Tr_ins')]
-        target_Tr_met = target[0,labels.index('Tr_met')]
+        target_ext_ratio = target[0,labels.index('ext_ratio')]
+        target_insert_loss = target[0,labels.index('insert_loss')]
         target_Temp = target[0,labels.index('Temp')]
         
-        pred_Tr_ins = pred[0,labels.index('Tr_ins')]
-        pred_Tr_met = pred[0,labels.index('Tr_met')]
+        pred_ext_ratio = pred[0,labels.index('ext_ratio')]
+        pred_insert_loss = pred[0,labels.index('insert_loss')]
         pred_Temp = pred[0,labels.index('Temp')]
         
         
         #loss function notes:
         
-        loss = (torch.square(torch.maximum(target_Tr_ins-pred_Tr_ins,torch.tensor(0))/target_Tr_ins) + 
-                torch.square(torch.maximum(pred_Tr_met-target_Tr_met,torch.tensor(0))/target_Tr_met) + 
+        loss = (torch.square((target_ext_ratio-pred_ext_ratio)/target_ext_ratio) + 
                 torch.square((target_Temp-pred_Temp)/target_Temp))
+                #torch.square((pred_insert_loss-target_insert_loss)/target_insert_loss) + 
+                
         
         # loss = ((pred_Tr_ins - target_Tr_ins)**2 
         #                 + (pred_Tr_met - target_Tr_met)**2 
@@ -481,11 +483,11 @@ class TopOpt():
         
         
         
-        error_terms = [abs(target_Tr_ins - pred_Tr_ins).detach().tolist(),
-                        abs(target_Tr_met - pred_Tr_met).detach().tolist(),
+        error_terms = [abs(target_ext_ratio - pred_ext_ratio).detach().tolist(),
+                        abs(target_insert_loss - pred_insert_loss).detach().tolist(),
                         abs(target_Temp - pred_Temp).detach().tolist()]
         
-        error_terms_labels = ['Tr_ins','Tr_met','Temp']
+        error_terms_labels = ['ext_ratio','insert_loss','Temp']
         
         # print("targets: Tr_ins, Tr_met, Temp: ", target_Tr_ins, target_Tr_met, target_Temp)
         # print("predicted: Tr_ins, Tr_met, Temp: ", pred_Tr_ins, pred_Tr_met, pred_Temp)
@@ -653,10 +655,9 @@ class TopOpt():
         #       pred_perf[labels.index('Tr_met')] +
         #       pred_perf[labels.index('A_met')])
         
-        ext_ratio, ins_loss = dB_response(pred_perf[labels.index('Tr_ins')],
-                                          abs(pred_perf[labels.index('Tr_met')]))
-        print('Extinction ratio (goal: > 30 dB): ',ext_ratio)
-        print('Insertion loss (goal: < 3 dB): ',ins_loss)
+
+        print('Extinction ratio (goal: > 30 dB): ',pred_perf[labels.index('ext_ratio')])
+        print('Insertion loss (goal: < 3 dB): ',pred_perf[labels.index('insert_loss')])
     
 
     def rescale_thk(self, np_array):
@@ -880,9 +881,9 @@ def main():
     perfnn = load_perfnet(perf_nn_folder)
         
     #initilize top_opt
-    top_opt = TopOpt(perfnn, .0001, device, False, symmetric=False)
-    tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
-    top_opt.set_targets(perfnn.label_names, tr_ins_goal, tr_met_goal, 285)
+    top_opt = TopOpt(perfnn, .001, device, False, symmetric=False)
+    #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
+    top_opt.set_targets(perfnn.label_names, 10, 1, 320)
     #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
@@ -890,7 +891,7 @@ def main():
         top_opt.pretrain(pretrain_density,5000)
     
     num_epochs = 5_000
-    p_max = 4
+    p_max = 1
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()
         
