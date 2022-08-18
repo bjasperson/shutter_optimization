@@ -57,15 +57,20 @@ class TopNet(nn.Module):
         # how to rectify?
 
         # linear layer output should be 2x125x125
+        
+        #initialize: https://pytorch.org/docs/stable/nn.init.html
 
         #self.flatten = nn.Flatten()
+        self.bn0 = nn.BatchNorm1d(2)
         self.bn1 = nn.BatchNorm1d(20)
         self.bn2 = nn.BatchNorm1d(20)
         self.bn3 = nn.BatchNorm1d(20)
         self.bn4 = nn.BatchNorm1d(20)
+        self.bn5 = nn.BatchNorm1d(20)
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc1 = nn.Linear(2, 20) #(was 2,20)
-        nn.init.xavier_normal_(self.fc1.weight) #from TOuNN.py
+
+        nn.init.xavier_normal_(self.fc1.weight) #xavier_normal_from TOuNN.py
         # last 3x dims going into reshaping (was 96*496*496 for 500 pixel)
         self.fc2 = nn.Linear(20, 20)
         nn.init.xavier_normal_(self.fc2.weight)
@@ -84,12 +89,14 @@ class TopNet(nn.Module):
         self.drop_layer2 = nn.Dropout(0)
         self.drop_layer3 = nn.Dropout(0) #was 0.02
         self.drop_layer4 = nn.Dropout(0) #was 0.02
+        self.drop_layer5 = nn.Dropout(0) #was 0.02
         
-        
-        self.l_relu1 = nn.LeakyReLU(0.1) #was 0.1
-        self.l_relu2 = nn.LeakyReLU(0.1)
-        self.l_relu3 = nn.LeakyReLU(0.1)
-        self.l_relu4 = nn.LeakyReLU(0.1)
+        self.l_relu1 = nn.LeakyReLU(0.01) #was 0.1
+        self.l_relu2 = nn.LeakyReLU(0.01)
+        self.l_relu3 = nn.LeakyReLU(0.01)
+        self.l_relu4 = nn.LeakyReLU(0.01)
+        self.l_relu5 = nn.LeakyReLU(0.01)
+
 
         # INITIALIZE WEIGHTS FOR LAYER THICKNESS
         # ref: https://discuss.pytorch.org/t/multiply-parameter-by-a-parameter-in-computation-graph/20401
@@ -108,9 +115,10 @@ class TopNet(nn.Module):
         tensor_thk = torch.tensor(thk).reshape((len(thk), 1, 1))
         return torch.nn.Parameter(tensor_thk).requires_grad_(grad_setting)
 
-    def forward(self, x, p_set,symmetric=False):
+    def forward(self, x, p_set, symmetric=False):
         #option w/ dropout, but not needed likely with batch norm added
         #prev had drop layer on all fc layers
+        x = self.bn0(x)
         x = self.drop_layer1(self.l_relu1(self.fc1(x)))
         x = self.bn1(x)
         x = self.drop_layer2(self.l_relu2(self.fc2(x)))
@@ -135,10 +143,10 @@ class TopNet(nn.Module):
         # print(x)
 
         # softmax option, matches uw
-        x = self.fc5(x)
+        x = self.drop_layer5((self.fc5(x)))
         x = 0.001 + torch.softmax(x, dim=1)
         #print('x after softmax:',x[50:100,:])
-        x = x[:, 0].view(-1)
+        x = x[:, 0].view(-1) #keep order but remove extra axis
         #print('rho at end:',x.shape)
 
         #print('rho_mean = ',self.rho.mean())
@@ -171,7 +179,8 @@ class TopNet(nn.Module):
         self.rho = x  # save density function
         
         # multiply by weights for layer thickness (creates indiv channels)
-        x = x**p_set*self.weightx  
+        x = torch.pow(x,p_set)*self.weightx
+        #x = x**p_set*self.weightx  
         return x
 
     # def num_flat_features(self, x):
@@ -389,7 +398,7 @@ class TopOpt():
         #print(self.input_xy.shape)
         
         #lock down perfnn
-        #self.perfnn.requires_grad_(False) #need to verify this works, doesn't appear to
+        #self.perfnn.requires_grad_(False) #don't do this, need to verify this works, doesn't appear to
         self.perfnn.requires_grad = False
         for param in self.perfnn.parameters():
             param.requires_grad = False
@@ -405,16 +414,16 @@ class TopOpt():
         #self.optimizer = optim.SGD(self.top_net.parameters(), lr=self.learning_rate, momentum=0.6) #from pytorch tutorial
 
         
-    def set_targets(self, labels, target_ext_ratio, target_insert_loss, target_temp):
+    def set_targets(self, labels, targets):
         """set targets for labels: ext_ratio, insert_loss and Temp
         """
         
         target_labels = Labels(self.perfnn)
-        
         array = np.zeros(len(labels))
-        array[labels.index('ext_ratio')] = target_ext_ratio
-        array[labels.index('insert_loss')] = target_insert_loss
-        array[labels.index('Temp')] = target_temp
+        
+        for i,name in enumerate(labels):
+            array[i] = targets[i]    
+        
         array_tf = torch.tensor(array)
         
         target_labels.label_update(array_tf, 'real')
@@ -437,11 +446,11 @@ class TopOpt():
         """
         C,H,W = self.image_shape
         
-        x_loc = [i/W for i in range(1,W+1)]
-        y_loc = [i/H for i in range(1,H+1)]
+        x_loc = [i/W for i in range(1,W+1)] #[float(np.random.rand(1)) for i in range(1,W+1)]
+        y_loc = [i/H for i in range(1,H+1)] #[float(np.random.rand(1)) for i in range(1,H+1)]
 
         # need grid combo, not just all points
-        combined_xy = [[x, y] for x in x_loc for y in y_loc]
+        combined_xy = [[y, x] for y in y_loc for x in x_loc]
 
         return torch.tensor(combined_xy)#, requires_grad=True)
     
@@ -464,11 +473,11 @@ class TopOpt():
         labels = self.perfnn.label_names
         
         target_ext_ratio = target[0,labels.index('ext_ratio')]
-        target_insert_loss = target[0,labels.index('insert_loss')]
+        #target_insert_loss = target[0,labels.index('insert_loss')]
         target_Temp = target[0,labels.index('Temp')]
         
         pred_ext_ratio = pred[0,labels.index('ext_ratio')]
-        pred_insert_loss = pred[0,labels.index('insert_loss')]
+        #pred_insert_loss = pred[0,labels.index('insert_loss')]
         pred_Temp = pred[0,labels.index('Temp')]
         
         
@@ -491,10 +500,11 @@ class TopOpt():
         
         
         error_terms = [abs(target_ext_ratio - pred_ext_ratio).detach().tolist(),
-                        abs(target_insert_loss - pred_insert_loss).detach().tolist(),
+                        #abs(target_insert_loss - pred_insert_loss).detach().tolist(),
                         abs(target_Temp - pred_Temp).detach().tolist()]
         
-        error_terms_labels = ['ext_ratio','insert_loss','Temp']
+        #error_terms_labels = ['ext_ratio','insert_loss','Temp']
+        error_terms_labels = ['ext_ratio','Temp']
         
         # print("targets: Tr_ins, Tr_met, Temp: ", target_Tr_ins, target_Tr_met, target_Temp)
         # print("predicted: Tr_ins, Tr_met, Temp: ", pred_Tr_ins, pred_Tr_met, pred_Temp)
@@ -761,32 +771,32 @@ def load_perfnet(folder):
 #     return image_stats_in, label_stats_in
 #%%
 
-# def dB_response(Tr_ins,Tr_met):   
-#     '''Calculates extinction ratio and insertion loss
+def dB_response(Tr_ins,Tr_met):   
+    '''Calculates extinction ratio and insertion loss
     
 
-#     Parameters
-#     ----------
-#     Tr_ins : TORCH.TENSOR, NP.ARRAY OR INT
-#         INSULATING TRANSMITTANCE
-#     Tr_met : TORCH.TENSOR, NP.ARRAY OR INT
-#         METALLIC TRANSMITTANCE
+    Parameters
+    ----------
+    Tr_ins : TORCH.TENSOR, NP.ARRAY OR INT
+        INSULATING TRANSMITTANCE
+    Tr_met : TORCH.TENSOR, NP.ARRAY OR INT
+        METALLIC TRANSMITTANCE
 
-#     Returns
-#     -------
-#     extinction_ratio
-#     insertion_loss
+    Returns
+    -------
+    extinction_ratio
+    insertion_loss
 
-#     '''
+    '''
         
-#     if torch.is_tensor(Tr_ins) or torch.is_tensor(Tr_met) == True:
-#         extinction_ratio = 10*torch.log10(Tr_ins/Tr_met)
-#         insertion_loss = 10*torch.log10(1/Tr_ins)
-#     else:
-#         extinction_ratio = 10*np.log10(Tr_ins/Tr_met)
-#         insertion_loss = 10*np.log10(1/Tr_ins)
+    if torch.is_tensor(Tr_ins) or torch.is_tensor(Tr_met) == True:
+        extinction_ratio = 10*torch.log10(Tr_ins/Tr_met)
+        insertion_loss = 10*torch.log10(1/Tr_ins)
+    else:
+        extinction_ratio = 10*np.log10(Tr_ins/Tr_met)
+        insertion_loss = 10*np.log10(1/Tr_ins)
     
-#     return(extinction_ratio,insertion_loss)
+    return(extinction_ratio,insertion_loss)
 
 # def dB_to_tr_goals(ext_ratio, insert_loss):
 #     """convert dB goals to Tr
@@ -897,15 +907,15 @@ def main():
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
-    top_opt.set_targets(perfnn.label_names, 10, 1, 285)
+    top_opt.set_targets(perfnn.label_names, (10, 285))
     #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":
         pretrain_density = input("pretrain density: ")
         top_opt.pretrain(pretrain_density,5000)
     
-    num_epochs = 2_000
-    p_max = 3
+    num_epochs = 3_000
+    p_max = 2
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()
         

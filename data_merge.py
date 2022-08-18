@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 import os
 import image_creation
+import matplotlib.pyplot as plt
 
+plt.rcParams["figure.dpi"] = 140
 
 def main():    
     #process input data, merge and create combined results
@@ -86,6 +88,17 @@ def analyze_results(file_path):
     df.plot("insert_loss","T_VO2_avg",kind="scatter")
     df.hist("ext_ratio")
     df.hist("insert_loss")
+    df["dT"] = df["T_VO2_avg"] - 273.15
+    
+    plt.figure()
+    plt.scatter(df["ext_ratio"],
+             df["dT"])
+    plt.title("Training Data")
+    plt.xlabel("Extinction Ratio - dB")
+    plt.ylabel("Temperature Rise - K")
+    plt.grid()
+    plt.show()
+    
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
     
