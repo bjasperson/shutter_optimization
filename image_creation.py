@@ -350,20 +350,30 @@ def random_gen_3(N_pts,N_pixels_width):
     
     return rand_array
 
-def random_gen_4(N_pts,N_pixels_width):
+def random_gen_4(N_pts, N_pixels_width, input_percent_coverage = []):
     """improved random gen with x and y symmetry
     only works for even N_pts for now
     """
+    #determine number of pixels in upper left corner
     N_corner_width = int(N_pixels_width//2 + N_pixels_width%2)
     N_corner_total = N_corner_width*N_corner_width
     
+    #initalize array of correct size
     rand_array = np.zeros((N_pts,1,N_corner_width,N_corner_width))
-    rand_num_ones = np.floor(np.random.rand(N_pts)*N_corner_total).astype(int)
+    
+    #num of ones is random percentage times number of points in corner
+    if input_percent_coverage == []:
+        rand_num_ones = np.floor(np.random.rand(N_pts)*N_corner_total).astype(int)
+    else:
+        rand_num_ones = np.floor(np.array(input_percent_coverage)*N_corner_total).astype(int)
     print("min:",min(rand_num_ones))
     print("max:",max(rand_num_ones))
+    
+    #repurpose full film and no film to limit values
     rand_num_ones[rand_num_ones==0] = 1
     rand_num_ones[rand_num_ones==N_corner_total] = N_corner_total-1
     
+    #populate image with ones based on number of ones needed for each instance
     for i in range(N_pts):
         rand_array_init = np.zeros(N_corner_total)
         rand_array_init[0:rand_num_ones[i]] = 1
@@ -401,13 +411,13 @@ def simulated_sym_results(images):
     """
     """
     N,C,H,W = images.shape
-    ideal_index = int(np.random.rand(1)*N)
-    
-    target_image = images[ideal_index,0]
+    #ideal_index = int(np.random.rand(1)*N)
+    #target_image = images[ideal_index,0]
+    target_image = random_gen_4(1,W,[0.75])[0][0]
     plt.imshow(target_image)
     plt.title("simulated ideal image")
     
-    loss = abs(images - images[ideal_index])
+    loss = abs(images - target_image)
     loss = loss.sum(axis=(2,3)).reshape(-1)
     
     Tr_ins = 1-0.5*loss/max(loss)
@@ -418,10 +428,18 @@ def simulated_sym_results(images):
     A_met = 1 - Tr_met - R_met
     Temp = 340-70*loss/max(loss)
     
-    out = np.array((R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp)).transpose()
+    perc_cov = (images.sum(axis=(2,3))/(H*W)).reshape(-1)
+    
+    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)+5-5*loss/(H*W)
+    insert_loss = ext_ratio*3/16
+    Temp = ext_ratio*((282-273)/(16))+273-5*loss/(H*W)
+    
+    #out = np.array((R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp)).transpose()
+    out = np.array((ext_ratio, insert_loss, Temp)).transpose()
     out[out==0] = 0.001
     
-    labels = 'R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp'
+    #labels = 'R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp'
+    labels = 'ext_ratio,insert_loss,Temp'
     
     return target_image, labels, out
     
