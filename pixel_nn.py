@@ -369,12 +369,12 @@ def save_model(input_data, network, data_directory):
 
 # %%
 def main(
-    num_epochs = 200,
+    num_epochs = 500,
     learning_rate = 0.001,
-    out_chnl = [10,10,10],
-    kernel_size = [3,3,3],
-    stride_size = [1,1,1],
-    padding_size = [1,1,1],
+    out_chnl = [30,10,10,10],
+    kernel_size = [3,3,3,3],
+    stride_size = [1,2,2,2],
+    padding_size = [1,1,1,1],
     n_batch_in = 2**8 #was 2**3
     ):
     """

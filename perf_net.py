@@ -720,9 +720,11 @@ class Network10(Network):
         # size_after_conv3 = int((size_after_conv2-k1+2*p1)/s1 + 1)
         # size_after_conv4 = int((size_after_conv3-k1+2*p1)/s1 + 1)
         
-        self.nn_layers = nn.ModuleList()
+        self.conv_layers = nn.ModuleList()
+        #self.batchnorm_layers = nn.ModuleList()
+        #self.pool_layers = nn.ModuleList()
         prev_layer_size = num_layers
-        prev_size = num_pixels_width
+        out_size = num_pixels_width
         for i in range(len(out_chnl)):
             next_layer = nn.Conv2d(prev_layer_size,
                                    out_chnl[i],
@@ -730,17 +732,15 @@ class Network10(Network):
                                    stride_size[i],
                                    padding_size[i],
                                    bias=False)
-            
+            self.conv_layers.append(next_layer)
             #pool_layer = nn.MaxPool2d(2,stride=1)
-            batch_layer = nn.BatchNorm2d(out_chnl[i])
+            #self.pool_layers.append(pool_layer)
             
-            conv_out_size = int((prev_size-kernel_size[i]+2*padding_size[i])/stride_size[i] + 1)
+            #batch_layer = nn.BatchNorm2d(out_chnl[i])
+            #self.batchnorm_layers.append(batch_layer) #commenting out, doesn't seem to help
+            conv_out_size = int((out_size-kernel_size[i]+2*padding_size[i])/stride_size[i] + 1)
             #pool_out_size = int((conv_out_size+2*0-1*(2-1)-1)/1 + 1)
             print(f"layer {i} output size: {conv_out_size}")
-            prev_size = conv_out_size
-            self.nn_layers.append(next_layer)
-            #self.nn_layers.append(pool_layer) #don't think this helps
-            #self.nn_layers.append(batch_layer) #commenting out temporarilty
             prev_layer_size = out_chnl[i]
             out_size = conv_out_size
         
@@ -781,8 +781,10 @@ class Network10(Network):
 
     def forward(self, x):
         
-        for i,layer in enumerate(self.nn_layers):
+        for i,layer in enumerate(self.conv_layers):
             x = F.relu(layer(x))
+            #x = self.pool_layers[i](x)
+            #x = self.batchnorm_layers[i](x)
         
         # x = self.conv1(x)
         # x = self.drop_layer1(F.relu(x))
