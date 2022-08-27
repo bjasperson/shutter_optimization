@@ -17,6 +17,7 @@ import perf_net
 import importlib
 import matplotlib.pyplot as plt
 import image_creation
+import os
 
 plt.rcParams['figure.dpi'] = 150
 
@@ -712,6 +713,16 @@ class TopOpt():
         #get timestamp
         timestamp = image_creation.create_timestamp()
         
+        #make folder
+        new_directory = os.path.join(path, 'optimized_design_'+timestamp)
+        os.mkdir(new_directory)
+        print("directory created: ", new_directory)
+        
+        #save top_opt
+        torch.save(self.top_net.state_dict(), new_directory + '/trained_model.pth')
+        with open(new_directory + '/top_opt_network.pkl', 'wb') as outp:
+            pickle.dump(self.top_net, outp, pickle.HIGHEST_PROTOCOL)
+        
         # save image
         image = image_creation.Image()
         image.images = self.images.detach().numpy()[0][0]
@@ -721,7 +732,7 @@ class TopOpt():
         image.images = np.concatenate((image.images,np.flip(image.images,1)),axis=1)
         
         H,W = image.images.shape
-        name = path + '/optimized_design_' + timestamp + '.npy'
+        name = new_directory + '/optimized_design_' + timestamp + '.npy'
         np.save(name, image.images)
         print('saved to: ', name)
         
@@ -734,11 +745,11 @@ class TopOpt():
         for i in range(H):
             for j in range(W):
                 image_txt.append([i,j,image.images[i,j]])
-        np.savetxt(path+'/optimized_design_'+timestamp+'.csv',image_txt,delimiter=",")
+        np.savetxt(new_directory+'/optimized_design_'+timestamp+'.csv',image_txt,delimiter=",")
         
         #save bits (requires N,C,H,W images)
         image.images = image.images.reshape(1,1,H,W)
-        image.save_comsol_inputs_gen2(path, timestamp)
+        image.save_comsol_inputs_gen2(new_directory, timestamp)
 
 
 # %%
@@ -844,6 +855,32 @@ def compare_prediction(pred_image, base_model_folder):
     print('number incorrect = ',error_total)
     print('percent_error = ',perc_error)
     
+    
+def vis_model_weights(model,layer):
+    """plot model weights
+    
+    ref:
+    https://debuggercafe.com/visualizing-filters-and-feature-maps-in-convolutional-neural-networks-using-pytorch/
+    """
+    
+    model_weights = []
+    conv_layers = []
+    
+    model_children = list(model.conv_layers.children())
+    counter = 0
+    for i in range(len(model_children)):
+        if type(model_children[i]) ==  nn.Conv2d:
+            counter += 1
+            model_weights.append(model_children[i].weight)
+            conv_layers.append(model_children[i])
+    
+    
+    plt.figure(figsize=(20, 17))
+    for i, filter in enumerate(model_weights[layer]):
+        plt.subplot(6, 5, i+1) # (8, 8) because in conv0 we have 7x7 filters and total of 64 (see printed shapes)
+        plt.imshow(filter[0, :, :].detach(), cmap='gray')
+        plt.axis('off')
+    plt.show()
 
 #%% Legacy main code
 # def legacy_code_main():
@@ -907,7 +944,7 @@ def main():
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
-    top_opt.set_targets(perfnn.label_names, (10, 285))
+    top_opt.set_targets(perfnn.label_names, (7, 285))
     #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
     if input("pretrain top_opt to specified rho? [y/n]")=="y":

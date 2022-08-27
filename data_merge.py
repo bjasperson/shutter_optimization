@@ -12,7 +12,7 @@ import os
 import image_creation
 import matplotlib.pyplot as plt
 
-plt.rcParams["figure.dpi"] = 140
+plt.rcParams["figure.dpi"] = 200
 
 def main():    
     #process input data, merge and create combined results
@@ -82,13 +82,16 @@ def analyze_results(file_path):
     """perform any analysis on results as needed
     """
     df = pd.read_pickle(file_path+"/df_all.pkl")
-    df.plot('T_VO2_avg','q_applied',kind="scatter")
-    df.plot("ext_ratio","T_VO2_avg",kind="scatter")
-    df.plot("ext_ratio","insert_loss",kind="scatter")
-    df.plot("insert_loss","T_VO2_avg",kind="scatter")
+    df["dT"] = df["T_VO2_avg"] - 273.15
+    df.plot('dT','q_applied',kind="scatter")
+    df.plot("ext_ratio","dT",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Temperature rise - K",grid=True)
+    df.plot("ext_ratio","insert_loss",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Insertion Loss -dB",grid=True)
+    df.plot("insert_loss","dT",kind="scatter",xlabel="Insertion Loss - dB",ylabel="Temperature rise -K",grid=True)
     df.hist("ext_ratio")
     df.hist("insert_loss")
-    df["dT"] = df["T_VO2_avg"] - 273.15
+
+    
+
     
     plt.figure()
     plt.scatter(df["ext_ratio"],
@@ -106,11 +109,11 @@ def analyze_results(file_path):
     for i,image in enumerate(df["image"]):
         total = sum(image[0].reshape(-1)>0)
         coverage.append(total)
-    df["coverage"] = coverage
+    df["coverage"] = coverage/max(coverage)
 
-    df.plot("coverage","ext_ratio",kind="scatter")
-    df.plot("coverage","insert_loss",kind="scatter")
-    df.plot("coverage","T_VO2_avg",kind="scatter")
+    df.plot("coverage","ext_ratio",kind="scatter",ylabel="Extinction Ratio - dB",grid=True)
+    df.plot("coverage","insert_loss",kind="scatter",ylabel="Insertion Loss - dB",grid=True)
+    df.plot("coverage","dT",kind="scatter",ylabel="Temperature Rise -K",grid=True)
     
 
 def combined_results(images,results):
