@@ -42,6 +42,7 @@ class Image():
                            '1=full permutation, generate data\n'+
                            '2=random images, generate data\n'+
                            '3=2 um wide, 0.1 um pixels, 20x20 random symmetric images, generate data\n'+
+                           '4=checkerboard\n'
                            '******\n')
         
         if input_list == '1':
@@ -61,6 +62,12 @@ class Image():
             self.pixel_width_um = 0.1
             input_N_points = int(input('number of images to gen: '))
             self.images = random_gen_4(input_N_points,input_width_pixels)
+        
+        elif input_list == '4':
+            input_width_pixels = 20
+            self.cell_width_um = 2
+            self.pixel_width_um = 0.1
+            self.images = checkboard(input_width_pixels)
         else:
             raise Exception('Select available input list')
         
@@ -387,6 +394,28 @@ def random_gen_4(N_pts, N_pixels_width, input_percent_coverage = []):
     
     
     return rand_array
+
+def checkboard(N_pixels_width):
+    """generate checkboard design
+    """
+    #determine number of pixels in upper left corner
+    
+    start_pt = [[1+4*i,2+4*j] for i in range(5) for j in range(5)]
+    array = np.zeros((2,1,N_pixels_width,N_pixels_width))
+    for pt in start_pt:
+        array[0,0,pt[0],pt[1]] = 1
+        array[0,0,pt[0]+1,pt[1]] = 1
+        array[0,0,pt[0],pt[1]-1] = 1
+        array[0,0,pt[0]+1,pt[1]-1] = 1
+
+    
+    #add second checkerboard, inverse to first
+    array[1,0] = array[0,0]
+    array[1,0][array[1,0]==0] = 2
+    array[1,0][array[1,0]==1] = 0
+    array[1,0][array[1,0]==2] = 1
+
+    return array
 
 ##########################################################################
 def simulated_results(images,ideal_image):

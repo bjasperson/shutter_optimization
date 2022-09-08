@@ -750,6 +750,15 @@ class TopOpt():
         #save bits (requires N,C,H,W images)
         image.images = image.images.reshape(1,1,H,W)
         image.save_comsol_inputs_gen2(new_directory, timestamp)
+        
+        #save readme with settings
+        readme = ""
+        self.target_labels.scale_labels()
+        targets = self.target_labels.labels
+        readme += f'target values: {targets} \n'
+        
+        with open(os.path.join(new_directory,'readme.txt'),'w') as output:
+            output.write(readme)
 
 
 # %%
@@ -944,12 +953,12 @@ def main():
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
-    top_opt.set_targets(perfnn.label_names, (7, 285))
+    top_opt.set_targets(perfnn.label_names, (10, 285))
     #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
     
-    if input("pretrain top_opt to specified rho? [y/n]")=="y":
-        pretrain_density = input("pretrain density: ")
-        top_opt.pretrain(pretrain_density,5000)
+    # if input("pretrain top_opt to specified rho? [y/n]")=="y":
+    #     pretrain_density = input("pretrain density: ")
+    #     top_opt.pretrain(pretrain_density,5000)
     
     num_epochs = 3_000
     p_max = 2
