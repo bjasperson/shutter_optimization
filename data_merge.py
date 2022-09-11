@@ -12,7 +12,7 @@ import os
 import image_creation
 import matplotlib.pyplot as plt
 
-plt.rcParams["figure.dpi"] = 200
+plt.rcParams["figure.dpi"] = 500
 
 def main():    
     #process input data, merge and create combined results
@@ -85,23 +85,26 @@ def analyze_results(file_path):
     df["dT"] = df["T_VO2_avg"] - 273.15
     df.plot('dT','q_applied',kind="scatter")
     df.plot("ext_ratio","dT",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Temperature rise - K",grid=True)
-    df.plot("ext_ratio","insert_loss",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Insertion Loss -dB",grid=True)
-    df.plot("insert_loss","dT",kind="scatter",xlabel="Insertion Loss - dB",ylabel="Temperature rise -K",grid=True)
+    #df.plot("ext_ratio","insert_loss",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Insertion Loss -dB",grid=True)
+    #df.plot("insert_loss","dT",kind="scatter",xlabel="Insertion Loss - dB",ylabel="Temperature rise -K",grid=True)
     df.hist("ext_ratio")
-    df.hist("insert_loss")
+    #df.hist("insert_loss")
 
-    
+    df_opt = pd.DataFrame(zip([10.01,10.22,10.03],[10.94,11.49,11.83]),columns=['ext_ratio','dT'])
 
-    
+    ###########################
     plt.figure()
     plt.scatter(df["ext_ratio"],
              df["dT"])
+    plt.scatter(df_opt["ext_ratio"],
+                df_opt["dT"],
+                marker='x')
     plt.title("Training Data")
-    plt.xlabel("Extinction Ratio - dB")
+    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
     plt.ylabel("Temperature Rise - K")
     plt.grid()
     plt.show()
-    
+
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
     
@@ -111,8 +114,30 @@ def analyze_results(file_path):
         coverage.append(total)
     df["coverage"] = coverage/max(coverage)
 
+    ###########################
+    plt.figure(figsize=(12,4))
+    plt.subplot(121)
+    plt.scatter(df["coverage"],
+                df["ext_ratio"])
+    plt.ylabel("Extinction Ratio - dB")
+    plt.xlabel("Percent Coverage")
+    plt.grid(True)
+    # plt.subplot(122)
+    # plt.scatter(df["coverage"],
+    #             df["insert_loss"])
+    # plt.ylabel("Insertion Loss - dB")
+    # plt.xlabel("Percent Coverage")
+    # plt.grid(True)
+    plt.subplot(122)
+    plt.scatter(df["coverage"],
+                df["dT"])
+    plt.ylabel("Temperature Rise - K")
+    plt.xlabel("Percent Coverage")
+    plt.grid(True)
+    plt.show()
+    ###########################
     df.plot("coverage","ext_ratio",kind="scatter",ylabel="Extinction Ratio - dB",grid=True)
-    df.plot("coverage","insert_loss",kind="scatter",ylabel="Insertion Loss - dB",grid=True)
+    #df.plot("coverage","insert_loss",kind="scatter",ylabel="Insertion Loss - dB",grid=True)
     df.plot("coverage","dT",kind="scatter",ylabel="Temperature Rise -K",grid=True)
     
 
