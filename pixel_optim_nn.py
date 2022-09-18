@@ -22,17 +22,12 @@ import os
 plt.rcParams['figure.dpi'] = 150
 
 
-# refs:
-# transfer learning: https://debuggercafe.com/transfer-learning-with-pytorch/
-# using nn for top opt: chandrasekharTOuNNTopologyOptimization2021
+# ref: chandrasekharTOuNNTopologyOptimization2021
 
 
 # TODO:
-# training original nn on normalized images
-# will need to convert predicted image here to non-normalized
-# will need statistics from pixel_nn to prep
-# also will need function to go backwards
-# implement scaling of loss with alpha and material
+    # readme should include pmax, number epochs, learning rate
+
 
 
 # %%
@@ -749,7 +744,7 @@ class TopOpt():
         
         #save bits (requires N,C,H,W images)
         image.images = image.images.reshape(1,1,H,W)
-        image.save_comsol_inputs_gen2(new_directory, timestamp)
+        image.save_comsol_inputs(new_directory, timestamp)
         
         #save readme with settings
         readme = ""

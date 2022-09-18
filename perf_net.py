@@ -13,6 +13,23 @@ import torch.nn.functional as F
 
 
 def norm_images(images,stats):
+    """
+    normalize images based on the provided statistics
+
+    Parameters
+    ----------
+    images : numpy.ndarray
+        (N,C,H,W) array of images to be normed
+    stats : dict
+        Contains label stastics 
+            (max, min, std, mean, image_shape, image_norm_code)
+
+    Returns
+    -------
+    normed_images : numpy.ndarray
+        Normalized image array
+
+    """
     N,C,H,W = images.shape
     
     code = stats['image_norm_code']

@@ -174,7 +174,8 @@ class InputData():
 
 # %%
 class Evaluate():
-
+    """
+    """
     def __init__(self, eval_dataloader, network):
         """
         """
