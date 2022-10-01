@@ -15,6 +15,8 @@ import pixel_optim_nn
 import perf_net
 import pixel_nn
 
+plt.rcParams["figure.dpi"] = 500
+
 
 #def plot_perfnn_performance():
 trained_model_folder = input("trained model folder: ")
@@ -24,11 +26,17 @@ df_results = pd.read_pickle(results_folder+"/df_all.pkl")
 #need to normalize input data based on perfnn stats
 images = df_results['image'].to_numpy()
 images = np.array([x for x in images])
-images_normed = perf_net.norm_images(images, perfnn.image_stats)
-DataLoader(train_dataset, batch_size=n_batch)
-#create dataloader
-evaluate_train = pixel_nn.Evaluate(input_data.train_dataloader, perfnn)
-evaluate_train.get_preds(device)
+images = images[:,:,:10,:10]
+labels = df_results[['ext_ratio','T_VO2_avg']].to_numpy()
+dataloader = pixel_nn.create_dataloader(perfnn.image_stats, 
+                                        perfnn.label_stats, 
+                                        images, 
+                                        labels, 
+                                        2**8)
+
+
+evaluate_train = pixel_nn.Evaluate(dataloader, perfnn)
+evaluate_train.get_preds('cpu')
 evaluate_train.pred_report()
 evaluate_train.plot_results()
     

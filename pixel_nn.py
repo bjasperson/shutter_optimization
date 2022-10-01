@@ -92,51 +92,28 @@ class InputData():
             self.orig_images, self.orig_labels, test_size=test_perc, shuffle=True)
 
         #################################
-        # normalize images
-        self.image_stats = self.get_image_stats(
-            images_train)  # only use training images for stats
+        # image stats, only use training images for stats
+        self.image_stats = self.get_image_stats(images_train)  
         self.image_stats['image_shape'] = self.orig_images.shape
         self.image_stats['image_norm_code'] = image_norm_code
 
-        images_train_normed = perf_net.norm_images(
-            images_train, self.image_stats).astype('float32')
-        images_test_normed = perf_net.norm_images(
-            images_test, self.image_stats).astype('float32')
-
-        # assign to torch tensor
-        images_train_normed_tf = torch.tensor(images_train_normed)
-        images_test_normed_tf = torch.tensor(images_test_normed)
-
-        #################################
-        # normalize responses
-        self.label_stats = self.get_labels_stats(
-            labels_train)  # only use training images for stats
+        # label stats, only use training images for stats
+        self.label_stats = self.get_labels_stats(labels_train)  
         self.label_stats['label_norm_code'] = label_norm_code
         self.label_stats['labels'] = self.labels_names
-
-        #label_centering_factor, label_denom_factor = self.label_norm_factors()
-        #self.label_centering_factor = label_centering_factor
-        #self.label_denom_factor = label_denom_factor
-
-        # labels_train_normed = perf_net.norm_labels(
-        #     labels_train, label_centering_factor, label_denom_factor)
-        # labels_test_normed = perf_net.norm_labels(
-        #     labels_test, label_centering_factor, label_denom_factor)
-
-        labels_train_tf = torch.tensor(labels_train)
-        labels_test_tf = torch.tensor(labels_test)
         
-        labels_train_normed_tf = perf_net.norm_labels(labels_train_tf,self.label_stats)
-        labels_test_normed_tf = perf_net.norm_labels(labels_test_tf,self.label_stats)
+        self.train_dataloader = create_dataloader(self.image_stats, 
+                                                  self.label_stats, 
+                                                  images_train, 
+                                                  labels_train, 
+                                                  n_batch)
+        self.test_dataloader = create_dataloader(self.image_stats, 
+                                                 self.label_stats, 
+                                                 images_test, 
+                                                 labels_test, 
+                                                 n_batch)
 
-        train_dataset = TensorDataset(images_train_normed_tf, labels_train_normed_tf)
-        test_dataset = TensorDataset(images_test_normed_tf, labels_test_normed_tf)
-
-        #################################
-        # create dataloaders
-        self.train_dataloader = DataLoader(train_dataset, batch_size=n_batch)
-        self.test_dataloader = DataLoader(test_dataset, batch_size=n_batch)
-
+    
     def get_labels_stats(self, array):
         array_max = array.max(axis=0)
         array_min = array.min(axis=0)
@@ -216,15 +193,21 @@ class Evaluate():
         print('\n')
 
     def plot_results(self):
-
+        num_labels = len(self.network.label_names)
+        plt.figure()
+        
+        fig,ax = plt.subplots(num_labels,1)
+        fig.tight_layout(h_pad=4)
+        
         for i in range(len(self.network.label_names)):
-            plt.figure()
+            plt.subplot(num_labels,1,i+1)
             plt.scatter(self.actual_values[:, i], self.predictions[:, i])
             plt.xlabel('Actual values')
             plt.ylabel('Predictions')
             plt.title(self.network.label_names[i])
             plt.grid()
-            
+        
+        for i in range(len(self.network.label_names)):
             plt.figure()
             plt.hist(self.error[:,i]*100)
             plt.xlabel("Percent error")
@@ -232,6 +215,43 @@ class Evaluate():
 
 
 #########################################################
+def create_dataloader(image_stats,label_stats,images,labels,n_batch):
+    """Create dataloader from set of images and labels
+
+    Parameters
+    ----------
+    image_stats : dict
+        Dictionary of image statistics
+    label_stats : dict
+        Dictionary of label statistics
+    images : np.array
+        Image arrays, N,C,H,W 
+    labels : np.array
+        Array of labels
+    n_batch : int
+        Batch size for dataloader (to be used during training?)
+
+    Returns
+    -------
+    dataloader : torch DataLoader
+        DataLoader instance created
+
+    """
+    # normalize images
+    images_normed = perf_net.norm_images(
+        images, image_stats).astype('float32')
+    
+    images_normed_tf = torch.tensor(images_normed)
+
+    # normalize responses
+    labels_tf = torch.tensor(labels)
+    labels_normed_tf = perf_net.norm_labels(labels_tf,label_stats)
+
+    dataset = TensorDataset(images_normed_tf, labels_normed_tf)
+
+    dataloader = DataLoader(dataset, batch_size=n_batch)
+    return dataloader
+
 def train(dataloader, model, loss_fn, optimizer, device, train_error):
     """
     """
@@ -469,70 +489,3 @@ def main(
 
 if __name__ == '__main__':
     main()
-
-# %%
-###########################################
-
-# attempt to use ray
-# Uncomment this to enable distributed execution
-# `ray.init(address="auto")`
-
-
-# def train_ray(config):
-#     #see: https://docs.ray.io/en/latest/tune/tutorials/tune-tutorial.html
-#     model = Network()
-#     model.to(device)
-
-#     optimizer_ray = optim.SGD(
-#         model.parameters(), lr=config["lr"], momentum=config["momentum"])
-
-#     train_loader = train_dataloader
-#     test_loader = test_dataloader
-
-#     for i in range(10):
-#         train(train_loader,model, loss_fn, optimizer_ray)
-#         acc = test(test_loader, model, loss_fn)
-
-#         print('acc = ', acc)
-#         # Send the current training result back to Tune
-#         tune.report(score=acc) #had to make sure this was set to mean_loss
-
-#         if i % 5 == 0:
-#             # This saves the model to the trial directory
-#             torch.save(model.state_dict(), "./model.pth")
-
-# ######################
-# search_space = {
-#     "lr": tune.loguniform(1e-6,1e-1),#tune.sample_from(lambda spec: 10**(-10 * np.random.rand())),
-#     "momentum": tune.uniform(0.1, 0.9)
-# }
-
-# analysis = tune.run(train_ray, config=search_space)
-
-# print("Best config: ", analysis.get_best_config(
-#     metric="score", mode="min"))
-
-
-##############################################################################
-##############################################################################
-# normalize data (legacy code)
-#stdev = film_df_in.std(axis=0)
-#mean = film_df_in.mean(axis=0)
-#df_normalized = (film_df_in-film_df_in.mean(axis=0))/film_df_in.std(axis=0)
-
-# norm_values = []
-# df_normalized = film_df_in
-
-# for col_name in film_df_in:
-#     col_max = df_normalized[col_name].max()
-#     col_min = df_normalized[col_name].min()
-#     difference = col_max-col_min
-
-#     df_normalized[col_name] = ((df_normalized[col_name]-col_min)/
-#                                     (col_max-col_min))
-
-#     norm_values.append([col_name,col_min,col_max])
-
-
-# film_df_train = df_normalized.sample(frac=0.8)
-# film_df_test = df_normalized.drop(film_df_train.index)
