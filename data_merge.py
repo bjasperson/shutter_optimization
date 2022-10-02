@@ -118,7 +118,8 @@ def analyze_results(file_path):
     plt.figure(figsize=(12,4))
     plt.subplot(121)
     plt.scatter(df["coverage"],
-                df["ext_ratio"])
+                df["ext_ratio"],
+                s=5)
     plt.ylabel("Extinction Ratio - dB")
     plt.xlabel("Percent Coverage")
     plt.grid(True)
@@ -130,7 +131,8 @@ def analyze_results(file_path):
     # plt.grid(True)
     plt.subplot(122)
     plt.scatter(df["coverage"],
-                df["dT"])
+                df["dT"],
+                s=5)
     plt.ylabel("Temperature Rise - K")
     plt.xlabel("Percent Coverage")
     plt.grid(True)
