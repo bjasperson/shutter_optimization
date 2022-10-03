@@ -19,8 +19,8 @@ plt.rcParams["figure.dpi"] = 500
 
 
 #def plot_perfnn_performance():
-trained_model_folder = input("trained model folder: ")
 results_folder = input("combined_results folder: ")
+trained_model_folder = input("trained model folder: ")
 perfnn = pixel_optim_nn.load_perfnet(trained_model_folder)
 df_results = pd.read_pickle(results_folder+"/df_all.pkl")
 #need to normalize input data based on perfnn stats

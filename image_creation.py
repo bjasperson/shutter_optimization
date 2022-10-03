@@ -188,6 +188,7 @@ def checkboard(N_pixels_width):
 
     
     #add second checkerboard, inverse to first
+    #this gives 75% coverage
     array[1,0] = array[0,0]
     array[1,0][array[1,0]==0] = 2
     array[1,0][array[1,0]==1] = 0
@@ -200,35 +201,25 @@ def simulated_sym_results(images):
     """simulated results, needs to be finished still!!
     """
     N,C,H,W = images.shape
-    #ideal_index = int(np.random.rand(1)*N)
-    #target_image = images[ideal_index,0]
-    target_image = random_gen_4(1,W,[0.75])[0][0]
+    target_perc = 0.6
+    target_image = random_gen_4(1,W,[target_perc])[0][0]
     plt.imshow(target_image)
     plt.title("simulated ideal image")
     
     loss = abs(images - target_image)
     loss = (loss.sum(axis=(2,3)).reshape(-1))/4 #divide by 4: symmetric
     
-    Tr_ins = 1-0.5*loss/max(loss)
-    Tr_met = 0.5*loss/max(loss)
-    # R_ins = (1 - Tr_ins)*0.5
-    # R_met = (1 - Tr_met)*0.5
-    # A_ins = 1 - Tr_ins - R_ins
-    # A_met = 1 - Tr_met - R_met
-    Temp = 340-70*loss/max(loss)
-    
     perc_cov = (images.sum(axis=(2,3))/(H*W)).reshape(-1)
     
-    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)+5-5*loss/(H*W)
-    insert_loss = ext_ratio*3/16
-    Temp = ext_ratio*((282-273)/(16))+273-5*loss/(H*W)
+    #loss = loss + 100*abs(target_perc-perc_cov)
     
-    #out = np.array((R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp)).transpose()
-    out = np.array((ext_ratio, insert_loss, Temp)).transpose()
+    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)+5
+    Temp = 273 + ext_ratio*((282-273)/(16))+5*(np.exp(-(loss-min(loss))))
+        
+    out = np.array((ext_ratio, Temp)).transpose()
     out[out==0] = 0.001
     
-    #labels = 'R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp'
-    labels = 'ext_ratio,insert_loss,Temp'
+    labels = 'ext_ratio,Temp'
     
     return target_image, labels, out
     

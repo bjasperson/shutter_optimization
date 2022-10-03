@@ -95,7 +95,19 @@ def analyze_results(file_path):
     ###########################
     plt.figure()
     plt.scatter(df["ext_ratio"],
-             df["dT"])
+             df["dT"],
+             s=5)
+    plt.title("Training Data")
+    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
+    plt.ylabel("Temperature Rise - K")
+    plt.grid()
+    plt.show()
+
+
+    plt.figure()
+    plt.scatter(df["ext_ratio"],
+             df["dT"],
+             s=5)
     plt.scatter(df_opt["ext_ratio"],
                 df_opt["dT"],
                 marker='x')
@@ -105,6 +117,7 @@ def analyze_results(file_path):
     plt.grid()
     plt.show()
 
+    ###########################
     print(df[["T_VO2_avg","ext_ratio","insert_loss"]].sort_values("ext_ratio"))
     print(df[df['T_VO2_avg']>281.65][['T_VO2_avg','q_applied']].sort_values(['T_VO2_avg','q_applied']))
     

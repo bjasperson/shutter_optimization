@@ -534,6 +534,33 @@ class TopOpt():
         # error_terms_labels = ['Tr_ins','Tr_met','Temp']
         
         return loss, error_terms, error_terms_labels
+    
+    def cust_loss_dT(self, pred_perf_in, alpha):
+        #############################
+        #trying with dT
+        
+        target = self.target_labels.labels
+        pred = pred_perf_in.labels
+        labels = self.perfnn.label_names
+        
+        target_ext_ratio = target[0,labels.index('ext_ratio')]
+        target_Temp = target[0,labels.index('dT')]
+        
+        pred_ext_ratio = pred[0,labels.index('ext_ratio')]
+        pred_Temp = pred[0,labels.index('dT')]
+        
+        
+       
+        loss = (torch.square((target_ext_ratio-pred_ext_ratio)/target_ext_ratio) + 
+                torch.square((target_Temp-pred_Temp)/target_Temp))
+
+        error_terms = [abs(target_ext_ratio - pred_ext_ratio).detach().tolist(),
+                        abs(target_Temp - pred_Temp).detach().tolist()]
+        
+        error_terms_labels = ['ext_ratio','dT']
+        
+        return loss, error_terms, error_terms_labels
+
 
 
     def pretrain(self, initial_density, num_epochs):
@@ -603,6 +630,7 @@ class TopOpt():
             
             #this is my current "best guess"
             objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
+            #objective, error_terms_in, error_labels_in = self.cust_loss_dT(predicted_perf, alpha)
 
             #backpropogation
             self.optimizer.zero_grad()
@@ -948,8 +976,11 @@ def main():
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
+    
+    #orig Temp
     top_opt.set_targets(perfnn.label_names, (10, 285))
-    #top_opt.set_targets(perfnn.label_names, tr_ins_goal, 0.1, 285)
+    #with dT
+    #top_opt.set_targets(perfnn.label_names, (10, 20))
     
     # if input("pretrain top_opt to specified rho? [y/n]")=="y":
     #     pretrain_density = input("pretrain density: ")

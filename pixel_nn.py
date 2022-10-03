@@ -204,7 +204,12 @@ class Evaluate():
             plt.scatter(self.actual_values[:, i], self.predictions[:, i])
             plt.xlabel('Actual values')
             plt.ylabel('Predictions')
-            plt.title(self.network.label_names[i])
+            title = self.network.label_names[i]
+            if title == "ext_ratio":
+                title = "Extinction Ratio"
+            if title == "Temp":
+                title = "Temperature"
+            plt.title(title)
             plt.grid()
         
         for i in range(len(self.network.label_names)):
