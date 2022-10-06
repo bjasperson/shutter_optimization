@@ -162,6 +162,7 @@ def combined_results(images,results):
     combined = pd.concat([images,results],axis=1).dropna(axis=0)    
     combined["ext_ratio"] = 10*np.log10(combined["Tr_ins"]/combined["Tr_met"])
     combined["insert_loss"] = 10*np.log10(1/combined["Tr_ins"])
+    combined["dT"] = combined["T_VO2_avg"]-273.15
     
     return combined
 
@@ -192,7 +193,7 @@ def nn_config(combined_df,readme):
     np_reduced_images = np_images[:,:,:H//2,:W//2]
     
     #saves the combined csv: R_ins,R_met,Tr_ins,Tr_met,A_ins,A_met,Temp
-    df_results = combined_df[['ext_ratio','insert_loss','T_VO2_avg']]
+    df_results = combined_df[['ext_ratio','insert_loss','T_VO2_avg','dT']]
     df_results = df_results.rename(columns={'T_VO2_avg':'Temp'})
     
     return combined_df,np_images,np_reduced_images,df_results,readme
@@ -204,7 +205,7 @@ def save_results(path, df_all, np_images, np_reduced_images, df_results, readme)
     df_all.to_pickle(path + 'df_all.pkl')
     np.save(path + 'full_feature_images',np_images)
     np.save(path + 'feature_images',np_reduced_images)
-    df_results.to_csv(path + 'final_comsol_results.csv', columns=['ext_ratio','insert_loss','Temp'], index=False)
+    df_results.to_csv(path + 'final_comsol_results.csv', columns=['ext_ratio','insert_loss','Temp','dT'], index=False)
     
     with open(os.path.join(path,'readme.txt'),'w') as output:
         output.write(readme)

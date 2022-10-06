@@ -6,13 +6,6 @@ Created on Wed Aug 25 12:01:38 2021
 @author: jaspers2
 """
 
-# 220101: original file in python:sandia:cnn_optimization
-################################################
-# TODO:
-# save NN along with data stats for optim_nn
-# need stats to convert final (normalized) image to actual size
-################################################
-
 import numpy as np
 import pandas as pd
 import torch
@@ -201,7 +194,7 @@ class Evaluate():
         
         for i in range(len(self.network.label_names)):
             plt.subplot(num_labels,1,i+1)
-            plt.scatter(self.actual_values[:, i], self.predictions[:, i])
+            plt.scatter(self.actual_values[:, i], self.predictions[:, i],s=5)
             plt.xlabel('Actual values')
             plt.ylabel('Predictions')
             title = self.network.label_names[i]
@@ -209,6 +202,8 @@ class Evaluate():
                 title = "Extinction Ratio"
             if title == "Temp":
                 title = "Temperature"
+            if title == "dT":
+                title = "Temperature Rise"
             plt.title(title)
             plt.grid()
         
@@ -371,6 +366,10 @@ def save_model(input_data, network, data_directory):
     with open(new_directory + '/network.pkl', 'wb') as outp:
         pickle.dump(network, outp, pickle.HIGHEST_PROTOCOL)
 
+    # save input data (denotes which is training/test; useful for future NN eval)
+    torch.save(input_data.train_dataloader,new_directory + '/train_dataloader.pkl')
+    torch.save(input_data.test_dataloader,new_directory + '/test_dataloader.pkl')
+    
     # save NN stats
     # nn_dict = {'network_name':which_network}
     # with open(os.path.join(new_directory,'nn_stats.txt'),'w') as output_file:
@@ -395,7 +394,8 @@ def save_model(input_data, network, data_directory):
 
 # %%
 def main(
-    num_epochs = 500,
+    #num_epochs = 500,
+    num_epochs = 300, #temp change for dummy data
     learning_rate = 0.001,
     out_chnl = [30,10,10,10],
     kernel_size = [3,3,3,3],

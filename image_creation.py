@@ -15,7 +15,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-
 master_directory = '/home/jaspers2/Documents/pixel_optimization/'
 
 class Image():
@@ -93,7 +92,11 @@ class Image():
         #simulated results
         if input('generate (20x20 symmetric) simulated results? y to gen/save:   ') == 'y':
             target_image, labels, fake_results = simulated_sym_results(self.images)
-
+            target_image = target_image[:10,:10]
+            
+            reduced_images = feature_image[:,:,:10,:10]
+            np.save(os.path.join(path,timestamp + '_reduced_images'),reduced_images)
+            
             np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '',delimiter=",")
             np.save(os.path.join(path,'target_image'),target_image)
         
@@ -196,12 +199,12 @@ def checkboard(N_pixels_width):
 
     return array
 
-##########################################################################
+
 def simulated_sym_results(images):
     """simulated results, needs to be finished still!!
     """
     N,C,H,W = images.shape
-    target_perc = 0.6
+    target_perc = 0.7
     target_image = random_gen_4(1,W,[target_perc])[0][0]
     plt.imshow(target_image)
     plt.title("simulated ideal image")
@@ -213,13 +216,14 @@ def simulated_sym_results(images):
     
     #loss = loss + 100*abs(target_perc-perc_cov)
     
-    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)+5
-    Temp = 273 + ext_ratio*((282-273)/(16))+5*(np.exp(-(loss-min(loss))))
+    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)
+    dT = 10*(np.exp(-(loss)/20))
+    #dT = ext_ratio*((282-273)/(16))+5*(np.exp(-(loss-min(loss))))
         
-    out = np.array((ext_ratio, Temp)).transpose()
+    out = np.array((ext_ratio, dT)).transpose()
     out[out==0] = 0.001
     
-    labels = 'ext_ratio,Temp'
+    labels = 'ext_ratio,dT'
     
     return target_image, labels, out
     

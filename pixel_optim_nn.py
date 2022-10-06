@@ -629,8 +629,8 @@ class TopOpt():
             predicted_perf.label_update(pred_label, 'normalized')
             
             #this is my current "best guess"
-            objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
-            #objective, error_terms_in, error_labels_in = self.cust_loss_dT(predicted_perf, alpha)
+            #objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
+            objective, error_terms_in, error_labels_in = self.cust_loss_dT(predicted_perf, alpha)
 
             #backpropogation
             self.optimizer.zero_grad()
@@ -978,9 +978,9 @@ def main():
     #tr_ins_goal, tr_met_goal = dB_to_tr_goals(10, 2)
     
     #orig Temp
-    top_opt.set_targets(perfnn.label_names, (10, 285))
+    #top_opt.set_targets(perfnn.label_names, (10, 285))
     #with dT
-    #top_opt.set_targets(perfnn.label_names, (10, 20))
+    top_opt.set_targets(perfnn.label_names, (10, 20))
     
     # if input("pretrain top_opt to specified rho? [y/n]")=="y":
     #     pretrain_density = input("pretrain density: ")
