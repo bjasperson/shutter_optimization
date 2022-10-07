@@ -66,9 +66,6 @@ def import_results(folder):
     """combines text file results from results folder, returns df
     """
     
-    #try this next: https://python-bloggers.com/2021/09/3-ways-to-read-multiple-csv-files-for-loop-map-list-comprehension/
-    #read tarfiles directly: https://stackoverflow.com/questions/2018512/reading-tar-file-contents-without-untarring-it-in-python-script
-    
     df = pd.DataFrame()
     for file in os.listdir(folder):
         df_in = pd.read_csv(os.path.join(folder,file),index_col='id')
@@ -85,10 +82,7 @@ def analyze_results(file_path):
     df["dT"] = df["T_VO2_avg"] - 273.15
     df.plot('dT','q_applied',kind="scatter")
     df.plot("ext_ratio","dT",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Temperature rise - K",grid=True)
-    #df.plot("ext_ratio","insert_loss",kind="scatter",xlabel="Extinction Ratio - dB",ylabel="Insertion Loss -dB",grid=True)
-    #df.plot("insert_loss","dT",kind="scatter",xlabel="Insertion Loss - dB",ylabel="Temperature rise -K",grid=True)
     df.hist("ext_ratio")
-    #df.hist("insert_loss")
 
     df_opt = pd.DataFrame(zip([10.01,10.22,10.03],[10.94,11.49,11.83]),columns=['ext_ratio','dT'])
 
@@ -136,12 +130,7 @@ def analyze_results(file_path):
     plt.ylabel("Extinction Ratio - dB")
     plt.xlabel("Percent Coverage")
     plt.grid(True)
-    # plt.subplot(122)
-    # plt.scatter(df["coverage"],
-    #             df["insert_loss"])
-    # plt.ylabel("Insertion Loss - dB")
-    # plt.xlabel("Percent Coverage")
-    # plt.grid(True)
+
     plt.subplot(122)
     plt.scatter(df["coverage"],
                 df["dT"],
@@ -152,7 +141,6 @@ def analyze_results(file_path):
     plt.show()
     ###########################
     df.plot("coverage","ext_ratio",kind="scatter",ylabel="Extinction Ratio - dB",grid=True)
-    #df.plot("coverage","insert_loss",kind="scatter",ylabel="Insertion Loss - dB",grid=True)
     df.plot("coverage","dT",kind="scatter",ylabel="Temperature Rise -K",grid=True)
     
 

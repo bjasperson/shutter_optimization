@@ -19,21 +19,8 @@ import os
 import pickle
 from sklearn.model_selection import train_test_split
 import perf_net
-#from ray import tune
-#from ray.tune.schedulers import ASHAScheduler
 
 
-# plan:
-# use pickle to capture class at runtime, save in folder
-# capture the norm method used along with net structure
-# roll perf_net into this file.
-# no need to load perf_net class in top_opt. just use
-# can even save the stats in the class instance! so no text file needed (although may want human readable)
-# https://stackoverflow.com/questions/4529815/saving-an-object-data-persistence
-
-
-# %%
-#########################################################
 class InputData():
 
     def __init__(self, data_dir):
@@ -42,32 +29,13 @@ class InputData():
 
     def data_import_pixel(self):
         print("import data")
-
-        # ------------------
-        # import image file (.py) and results file (.txt)
-        # images
         
         self.orig_images = np.load(
             self.data_dir + '/feature_images.npy').astype(np.float32)
     
-                
-
-        # ------------------
-        # labels:
         result_labels_orig = pd.read_csv(
             self.data_dir + '/final_comsol_results.csv', delimiter=',')
-        # result_labels_orig.set_index(index_labels,inplace=True)
 
-        # ------------------
-        # image key to match order of images to labels
-        # image_key = pd.read_csv(data_directory + '/key.csv',index_col=(0))
-        # self.image_key = image_key/10**9
-
-        # ------------------
-        # sort labels based on image key
-        # orig_labels_raw = result_labels_orig.astype('float32')
-        # labels_ordered = pd.merge(self.image_key,orig_labels_raw, how='left', on=index_labels)
-        # labels_ordered.drop(index_labels,axis=1,inplace=True)
         self.orig_labels = result_labels_orig.astype('float32').values
         self.labels_names = result_labels_orig.columns.to_list()
 
@@ -76,15 +44,14 @@ class InputData():
         self.num_pixels = H*W
         self.num_pixels_width = W
 
-        # ------------------
         print('import done')
+
 
     def create_datasets(self, test_perc, n_batch, image_norm_code=[], label_norm_code=[]):
         # split dataset into train and test
         images_train, images_test, labels_train, labels_test = train_test_split(
             self.orig_images, self.orig_labels, test_size=test_perc, shuffle=True)
 
-        #################################
         # image stats, only use training images for stats
         self.image_stats = self.get_image_stats(images_train)  
         self.image_stats['image_shape'] = self.orig_images.shape
@@ -110,7 +77,6 @@ class InputData():
     def get_labels_stats(self, array):
         array_max = array.max(axis=0)
         array_min = array.min(axis=0)
-        #df_orig_avg = (df_orig_max+df_orig_min)/2
         array_std = array.std(axis=0)
         array_mean = array.mean(axis=0)
 
@@ -140,9 +106,6 @@ class InputData():
         return stats
 
 
-
-
-# %%
 class Evaluate():
     """
     """
@@ -157,13 +120,6 @@ class Evaluate():
         with torch.no_grad():
             preds_all, error_all, labels_all = get_all_preds(
                 self.eval_dataloader, self.network, device)
-
-        # preds_all = preds_all.cpu().numpy()
-        # labels_all = labels_all.cpu().numpy()
-
-        # preds_all_rescaled = perf_net.rescale_labels(preds_all,
-        #                                              self.network.label_centering_factor,
-        #                                              self.network.label_denom_factor)
 
         preds_all_rescaled = perf_net.rescale_labels(preds_all, self.network.label_stats)
         preds_all_rescaled = preds_all_rescaled.cpu().numpy()
@@ -181,22 +137,24 @@ class Evaluate():
         print('labels:', self.network.label_names)
         print('average abs(preds-labels):', self.diff.mean(axis=0))
         print('max abs(preds-labels):', self.diff.max(axis=0))
-        #print('min abs(preds-labels):', self.diff.min(axis=0))
         print('average abs error [%]:', self.error.mean(axis=0)*100)
         print('\n')
 
     def plot_results(self):
-        num_labels = len(self.network.label_names)
-        plt.figure()
+
+        plt.rcParams['figure.dpi'] = 150
+        plt.rcParams['font.size'] = 14     
         
-        fig,ax = plt.subplots(num_labels,1)
-        fig.tight_layout(h_pad=4)
-        
+        fig, ax = plt.subplots(1,len(self.network.label_names),figsize=(10,5))
+        fig.tight_layout(h_pad=6)
         for i in range(len(self.network.label_names)):
-            plt.subplot(num_labels,1,i+1)
-            plt.scatter(self.actual_values[:, i], self.predictions[:, i],s=5)
-            plt.xlabel('Actual values')
-            plt.ylabel('Predictions')
+            axis_max = max(np.array([self.predictions[:,i],self.actual_values[:,i]]).reshape(-1,1))
+            ax[i].axis('equal')
+            ax[i].scatter(self.actual_values[:, i], self.predictions[:, i],s=5)
+            ax[i].set(xlim=(0,axis_max),ylim=(0,axis_max),xlabel='Actual values')
+            if i == 0:
+                ax[i].set_ylabel('Predictions')
+            
             title = self.network.label_names[i]
             if title == "ext_ratio":
                 title = "Extinction Ratio"
@@ -204,8 +162,9 @@ class Evaluate():
                 title = "Temperature"
             if title == "dT":
                 title = "Temperature Rise"
-            plt.title(title)
-            plt.grid()
+            ax[i].set_title(title)
+            ax[i].grid()
+
         
         for i in range(len(self.network.label_names)):
             plt.figure()
@@ -255,7 +214,7 @@ def create_dataloader(image_stats,label_stats,images,labels,n_batch):
 def train(dataloader, model, loss_fn, optimizer, device, train_error):
     """
     """
-    #size = len(dataloader.dataset)
+
     model.train()
     train_loss = 0
     batch_num = 0
@@ -274,10 +233,6 @@ def train(dataloader, model, loss_fn, optimizer, device, train_error):
 
         train_loss += loss.item()
 
-        # if batch % 100 == 0:
-        #     loss, current = loss.item(), batch * len(X)
-        #     print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
     train_loss /= batch_num
 
     train_error.append(train_loss)
@@ -288,7 +243,7 @@ def train(dataloader, model, loss_fn, optimizer, device, train_error):
 def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
     """
     """
-    #size = len(dataloader.dataset)
+
     model.eval()
     test_loss = 0
     error_calc = []
@@ -300,19 +255,9 @@ def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
             pred = model(X)
             test_loss += loss_fn(pred, y).item()
 
-            # problematic when y=0, which happens w/ normalized data
-            # if error_flag == True:
-            #     batch_error = 100*(pred-y)/y
-            #     print(batch_error)
-            #     batch_error_list = batch_error.tolist()
-            #     error_calc.append(batch_error_list)
-            #correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-
     test_loss /= batch_num
 
     test_error.append(test_loss)
-    # correct /= size #legacy code from pytorch
-    #print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
     if error_flag == True:
         return(error_calc)
@@ -323,7 +268,6 @@ def test(dataloader, model, loss_fn, device, test_error, error_flag=False):
 #########################################################
 def get_all_preds(dataloader, model, device):
     all_labels = torch.tensor([]).to(device)
-    #all_thk = torch.tensor([]).to(device)
     all_preds = torch.tensor([]).to(device)
     all_error = torch.tensor([]).to(device)
 
@@ -355,7 +299,6 @@ def save_model(input_data, network, data_directory):
                  str(date.minute).rjust(2, '0'))
 
     # create directory
-    #new_directory = os.path.join(data_directory,timestamp + '_trained_model')
     new_directory = os.path.join(data_directory, 'trained_model_'+timestamp)
     os.mkdir(new_directory)
     print("directory created: ", new_directory)
@@ -370,11 +313,6 @@ def save_model(input_data, network, data_directory):
     torch.save(input_data.train_dataloader,new_directory + '/train_dataloader.pkl')
     torch.save(input_data.test_dataloader,new_directory + '/test_dataloader.pkl')
     
-    # save NN stats
-    # nn_dict = {'network_name':which_network}
-    # with open(os.path.join(new_directory,'nn_stats.txt'),'w') as output_file:
-    #     output_file.write(str(nn_dict))
-
     # save image stats
     image_dict = {}
     image_dict.update(input_data.image_stats)
@@ -382,7 +320,6 @@ def save_model(input_data, network, data_directory):
         output_file.write(str(image_dict))
 
     # save label state
-    #label_dict = {'label_norm_code':label_norm_code}
     label_dict = {}
     label_dict.update(input_data.label_stats)
     with open(os.path.join(new_directory, 'label_stats.txt'), 'w') as output_file:
@@ -410,12 +347,9 @@ def main(
     data_dir = input('paste data directory:  ')
     network_name = input('network name:   ')
     network_to_use = getattr(perf_net, network_name)
-    # index_labels = ['d_pix','gap','th_s1','th_s2'] #for setting df index
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
     
-
-    # device = 'cpu'#"cuda" if torch.cuda.is_available() else "cpu"
     if use_gpu == True:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     else:
@@ -435,8 +369,6 @@ def main(
     network = network_to_use(input_data, out_chnl, kernel_size, stride_size, padding_size).to(device)
     network.network_name = network_name
 
-    # print(network)
-
     # output parameters of model
     params = list(network.parameters())
     print("length of parameters = ", len(params))
@@ -449,7 +381,7 @@ def main(
                               lr=learning_rate)  # from deeplizard
     #momentum = 0.87
     #optimizer_in = optim.SGD(network.parameters(), lr=learning_rate, momentum=momentum) #from pytorch tutorial
-    loss_fn_in = nn.MSELoss()  # MSE seems appropriate for continuous label
+    loss_fn_in = nn.MSELoss()  # MSE for continuous label
     test_error = []
     train_error = []
 

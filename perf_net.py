@@ -13,23 +13,19 @@ import torch.nn.functional as F
 
 
 def norm_images(images,stats):
-    """
-    normalize images based on the provided statistics
-
-    Parameters
-    ----------
-    images : numpy.ndarray
-        (N,C,H,W) array of images to be normed
-    stats : dict
-        Contains label stastics 
-            (max, min, std, mean, image_shape, image_norm_code)
-
-    Returns
-    -------
-    normed_images : numpy.ndarray
-        Normalized image array
+    """normalize images based on given input statistics
+    
+    :param images: (N,C,H,W) array of images to be normed
+    :type images: numpy.ndarray
+    
+    :param stats: Contains label stastics (max, min, std, mean, image_shape, image_norm_code)
+    :type stats: dict
+    
+    :return: normed_images (Normalized image array)
+    :rtype: numpy.ndarray
 
     """
+
     N,C,H,W = images.shape
     
     code = stats['image_norm_code']
@@ -85,20 +81,6 @@ def rescale_thk(thk_in,stats):
         raise Exception("rescale not defined")
     elif code == 3:
         raise Exception("rescale not defined")
-    
-
-# def norm_labels(array,centering_factor,denom_factor):
-#     if type(array) != np.ndarray:
-#         raise Exception('norm_labels requires np array')
-    
-
-#     return (array - centering_factor)/denom_factor
-
-# def rescale_labels(array, centering_factor, denom_factor):
-#     if type(array) != np.ndarray:
-#         raise Exception('rescale_labels requires np array')
-        
-#     return array*denom_factor + centering_factor
 
 
 def label_norm_factors(stats, df=torch.empty(1)):
