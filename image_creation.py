@@ -214,12 +214,19 @@ def simulated_sym_results(images):
     
     perc_cov = (images.sum(axis=(2,3))/(H*W)).reshape(-1)
     
-    #loss = loss + 100*abs(target_perc-perc_cov)
+    #legacy approach that worked, refactored for ext ratio and dT
+    Tr_ins = 1-0.5*loss/max(loss)
+    Tr_met = 0.5*loss/max(loss)
+    Tr_ins[Tr_ins<0.01] = 0.01
+    Tr_met[Tr_met<0.01] = 0.01 
+
+    ext_ratio = 10*np.log10(Tr_ins/Tr_met)
+    dT = 10*(1-(loss/max(loss)))
     
-    ext_ratio = 11*np.sin((np.pi/2)*perc_cov)
-    dT = 10*(np.exp(-(loss)/20))
-    #dT = ext_ratio*((282-273)/(16))+5*(np.exp(-(loss-min(loss))))
-        
+    #experimental approach
+    #ext_ratio = 11*np.sin((np.pi/2)*perc_cov)
+    #dT = 10*(np.exp(-(loss)/20))
+            
     out = np.array((ext_ratio, dT)).transpose()
     out[out==0] = 0.001
     

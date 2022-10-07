@@ -979,8 +979,12 @@ def main():
     
     #orig Temp
     #top_opt.set_targets(perfnn.label_names, (10, 285))
+    
     #with dT
-    top_opt.set_targets(perfnn.label_names, (10, 20))
+    #top_opt.set_targets(perfnn.label_names, (10, 20))
+    
+    #for dummy data
+    top_opt.set_targets(perfnn.label_names, (20, 10))
     
     # if input("pretrain top_opt to specified rho? [y/n]")=="y":
     #     pretrain_density = input("pretrain density: ")
