@@ -331,8 +331,7 @@ def save_model(input_data, network, data_directory):
 
 # %%
 def main(
-    #num_epochs = 500,
-    num_epochs = 300, #temp change for dummy data
+    num_epochs = 300, #300 for dummy data, 500 for top opt
     learning_rate = 0.001,
     out_chnl = [30,10,10,10],
     kernel_size = [3,3,3,3],
@@ -345,7 +344,8 @@ def main(
     #######################
     # initial inputs
     data_dir = input('paste data directory:  ')
-    network_name = input('network name:   ')
+    #network_name = input('network name:   ')
+    network_name = 'Network_PerfNet' #set to default
     network_to_use = getattr(perf_net, network_name)
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 
