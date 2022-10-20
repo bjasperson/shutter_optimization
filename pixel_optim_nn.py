@@ -128,25 +128,16 @@ class Labels():
         self.label_stats = perfnn.label_stats
         
     def label_update(self,label_tf, state):
-        """assign updated labels
-
-        Parameters
-        ----------
-        label_tf : TORCH.TENSOR
-            TENSOR OF LABELS
-        state : STR
-            "normalized" OR "real"
-
-        Raises
-        ------
-        Exception
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
         """
+        update label state (normalized or real)
+        
+        :param label_tf: tensor of labels
+        :type label_tf: torch.tensor
+        :param state: state of label; "normalized" OR "real"
+        :type state: str
+        :raises Exception: label must be a tensor
+        """
+
         if type(label_tf) != torch.Tensor:
             raise Exception('label must be tensor')
 
@@ -196,10 +187,7 @@ class TopOpt():
         elif symmetric == True:
             self.input_xy = self.gen_xy_sym().to(device)
         
-        #print(self.input_xy.shape)
-        
         #lock down perfnn
-        #self.perfnn.requires_grad_(False) #don't do this, need to verify this works, doesn't appear to
         self.perfnn.requires_grad = False
         for param in self.perfnn.parameters():
             param.requires_grad = False
@@ -213,7 +201,7 @@ class TopOpt():
             self.top_net.parameters(), amsgrad=True, lr=self.learning_rate)#, weight_decay=1e-5)
         
     def set_targets(self, labels, targets):
-        """set targets for labels: ext_ratio, insert_loss and Temp
+        """set targets for labels: ext_ratio, Temp or dT
         """
         
         target_labels = Labels(self.perfnn)
@@ -230,16 +218,11 @@ class TopOpt():
         
 
     def generate_xy(self):
-        """Generate xy input points for top_net
-
-        Parameters
-        ----------
-        none
-
-        Returns
-        -------
-        xy_tensor : tensor [:,2]
-            tensor of x,y locations
+        """
+        Generate xy input points for top_net
+        
+        :return: xy_tensor (N,2) tensor of x,y locations
+        :rtype: tensor
 
         """
         C,H,W = self.image_shape
@@ -249,7 +232,6 @@ class TopOpt():
 
         # need grid combo, not just all points
         combined_xy = [[y, x] for y in y_loc for x in x_loc]
-
         return torch.tensor(combined_xy)#, requires_grad=True)
 
     def cust_loss(self, pred_perf_in, alpha):
@@ -294,8 +276,6 @@ class TopOpt():
         
         pred_ext_ratio = pred[0,labels.index('ext_ratio')]
         pred_Temp = pred[0,labels.index('dT')]
-        
-        
        
         loss = (torch.square((target_ext_ratio-pred_ext_ratio)/target_ext_ratio) + 
                 torch.square((target_Temp-pred_Temp)/target_Temp))
@@ -338,30 +318,18 @@ class TopOpt():
     def optimize(self, alpha_0, delta_alpha, alpha_max, max_epochs, p_init, delta_p, p_max):
         """perform optimization/training of top_op
 
-        Positional arguments:
-            max_epochs : int 
-                maximum number of epochs (int)
-
         """
 
         self.perfnn.eval()  #set perf_net to eval mode
         self.top_net.train() #top_net is training (influences dropout)
-
-
         alpha = alpha_0
-
         optimize_loss = []
         error_terms = []
-        
         self.target_labels.normalize_labels()
         predicted_perf = Labels(self.perfnn)
-
         p_set = p_init
         
-
-        
         for i in range(max_epochs):
-                
             # forward pass to obtain predicted images
             # no need to normalize images first b/c using "normalized" layer thicknesses
             
@@ -373,8 +341,10 @@ class TopOpt():
             predicted_perf.label_update(pred_label, 'normalized')
             
             #this is my current "best guess"
-            #objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
-            objective, error_terms_in, error_labels_in = self.cust_loss_dT(predicted_perf, alpha)
+            if 'Temp' in self.perfnn.label_names:
+                objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
+            elif 'dT' in self.perfnn.label_names:
+                objective, error_terms_in, error_labels_in = self.cust_loss_dT(predicted_perf, alpha)
 
             #backpropogation
             self.optimizer.zero_grad()
@@ -457,7 +427,6 @@ class TopOpt():
         return
 
     def save_results(self, path):
-        #get timestamp
         timestamp = image_creation.create_timestamp()
         
         #make folder
@@ -525,23 +494,18 @@ def load_perfnet(folder):
         return nn
 
 
-def dB_response(Tr_ins,Tr_met):   
-    '''Calculates extinction ratio and insertion loss
+def dB_response(Tr_ins,Tr_met): 
+    """
+    Calculates extinction ratio and insertion loss
     
+    :param Tr_ins: insulating transmittance
+    :type Tr_ins: torch.tensor, np.array or int
+    :param Tr_met: metallic transmittance
+    :type Tr_met: torch.tensor, np.array or int
+    :return: extinction ratio, insertion loss
+    :rtype: int, int
 
-    Parameters
-    ----------
-    Tr_ins : TORCH.TENSOR, NP.ARRAY OR INT
-        INSULATING TRANSMITTANCE
-    Tr_met : TORCH.TENSOR, NP.ARRAY OR INT
-        METALLIC TRANSMITTANCE
-
-    Returns
-    -------
-    extinction_ratio
-    insertion_loss
-
-    '''
+    """
         
     if torch.is_tensor(Tr_ins) or torch.is_tensor(Tr_met) == True:
         extinction_ratio = 10*torch.log10(Tr_ins/Tr_met)
@@ -566,7 +530,6 @@ def plot_error(error_terms, error_labels, y_limit = None):
     plt.show()
     
 def compare_prediction(pred_image, base_model_folder):
-    #target = np.load(input('target file: '))
     target_file = base_model_folder + '/target_image.npy'
     target = np.load(target_file)
     
@@ -636,15 +599,17 @@ def main():
     print('Trainable parameters:', sum(p.numel()
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
-    #orig Temp selection was 10 dB, 285 K
     target_choice = input('1) Actual or 2) dummy data?  ')    
     if target_choice == '1':
-        #actual data, dT = 20K
-        top_opt.set_targets(perfnn.label_names, (10, 20))
+        #for use with actual data
+        if 'Temp' in perfnn.label_names:
+            #orig Temp selection was 10 dB, 285 K
+            top_opt.set_targets(perfnn.label_names, (10,285))
+        elif 'dT' in perfnn.label_names:
+            top_opt.set_targets(perfnn.label_names, (10, 20))
     elif target_choice == '2':
         #for dummy data, slightly different targets
         top_opt.set_targets(perfnn.label_names, (20, 10))    
-    
     
     num_epochs = 3_000
     p_max = 2

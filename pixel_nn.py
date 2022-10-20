@@ -11,7 +11,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 import matplotlib.pyplot as plt
 import datetime
@@ -326,10 +325,7 @@ def save_model(input_data, network, data_directory):
         output_file.write(str(label_dict))
 
     return
-#########################################################
 
-
-# %%
 def main(
     num_epochs = 300, #300 for dummy data, 500 for top opt
     learning_rate = 0.001,
