@@ -345,7 +345,7 @@ def main(
     # initial inputs
     data_dir = input('paste data directory:  ')
     #network_name = input('network name:   ')
-    network_name = 'Network_PerfNet' #set to default
+    network_name = 'Network10' #set to default
     network_to_use = getattr(perf_net, network_name)
     use_gpu = False  # manual override for gpu option; having issues with pixel_optim_nn on gpu
 

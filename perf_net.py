@@ -194,7 +194,7 @@ class Network(nn.Module):
         self.label_stats = input_data.label_stats
         self.label_names = input_data.labels_names
     
-class Network_PerfNet(Network):  
+class Network10(Network):  
     def __init__(self, input_data, out_chnl = [10], kernel_size = [3], stride_size = [3], padding_size = [3]): #was 512               
         """
         """

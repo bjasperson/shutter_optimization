@@ -9,12 +9,9 @@ Created on Wed Jan 26 09:17:17 2022
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import TensorDataset, DataLoader
 import pickle
 import perf_net
-import importlib
 import matplotlib.pyplot as plt
 import image_creation
 import os
@@ -99,7 +96,8 @@ class TopNet(nn.Module):
         # x = self.bn3(x)
         # x = self.drop_layer4(self.l_relu4(self.fc4(x)))
         # x = self.bn4(x)
-
+        # x = self.drop_layer5((self.fc5(x)))
+        
         #option w/o dropout
         x = self.bn0(x)
         x = self.l_relu1(self.fc1(x))
@@ -110,10 +108,9 @@ class TopNet(nn.Module):
         x = self.bn3(x)
         x = self.l_relu4(self.fc4(x))
         x = self.bn4(x)
-        
+        x = self.fc5(x)
 
-        # softmax option, matches uw
-        x = self.drop_layer5((self.fc5(x)))
+        # softmax option
         x = 0.001 + torch.softmax(x, dim=1)
         x = x[:, 0].view(-1) #keep order but remove extra axis
         x = torch.reshape(x, (1, self.image_shape[1], self.image_shape[2]))
@@ -639,15 +636,14 @@ def main():
     print('Trainable parameters:', sum(p.numel()
           for p in top_opt.top_net.parameters() if p.requires_grad))
     
-    
-    #orig Temp
-    #top_opt.set_targets(perfnn.label_names, (10, 285))
-    
-    #with dT
-    #top_opt.set_targets(perfnn.label_names, (10, 20))
-    
-    #for dummy data
-    top_opt.set_targets(perfnn.label_names, (20, 10))
+    #orig Temp selection was 10 dB, 285 K
+    target_choice = input('1) Actual or 2) dummy data?  ')    
+    if target_choice == '1':
+        #actual data, dT = 20K
+        top_opt.set_targets(perfnn.label_names, (10, 20))
+    elif target_choice == '2':
+        #for dummy data, slightly different targets
+        top_opt.set_targets(perfnn.label_names, (20, 10))    
     
     
     num_epochs = 3_000
@@ -665,11 +661,11 @@ def main():
     
     plot_error(top_opt.error_terms, top_opt.error_labels)
     
-    
-    if input('compare with target (dummy data only)? y to compare:  ') == 'y':
-        base_model_folder = input('base model folder: ')
-        compare_prediction(top_opt.images, base_model_folder)
-    
+    if target_choice == '2': #if dummy data selection
+        if input('compare with target (dummy data only)? y to compare:  ') == 'y':
+            base_model_folder = input('base model folder: ')
+            compare_prediction(top_opt.images, base_model_folder)
+        
     if input('save results? y to save:  ') == 'y':
         top_opt.save_results(perf_nn_folder)
 
