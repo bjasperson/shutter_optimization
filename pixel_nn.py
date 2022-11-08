@@ -151,6 +151,8 @@ class Evaluate():
             ax[i].axis('equal')
             ax[i].scatter(self.actual_values[:, i], self.predictions[:, i],s=5)
             ax[i].set(xlim=(0,axis_max),ylim=(0,axis_max),xlabel='Actual values')
+            ax[i].set_xticks(np.arange(0,axis_max,2))
+            ax[i].set_yticks(np.arange(0,axis_max,2))
             if i == 0:
                 ax[i].set_ylabel('Predictions')
             
