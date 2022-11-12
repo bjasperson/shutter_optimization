@@ -40,7 +40,8 @@ def main():
         check = "combined_results_folder" in locals()
         if check == False:
             combined_results_folder = input("combined results folder: ")
-        analyze_results(combined_results_folder)  
+        save = input("save results (y/n)?   ")
+        analyze_results(combined_results_folder,save)  
         
 
 def import_images(folder):
@@ -75,7 +76,7 @@ def import_results(folder):
     
     return df
 
-def analyze_results(file_path):
+def analyze_results(file_path,save):
     """perform any analysis on results as needed
     """
     df = pd.read_pickle(file_path+"/df_all.pkl")
@@ -95,8 +96,11 @@ def analyze_results(file_path):
     plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
     plt.ylabel("Temperature Rise - K")
     plt.grid()
+    if save == 'y':
+        plt.tight_layout()
+        plt.savefig("/home/jaspers2/Desktop/training_data.eps")
     plt.show()
-
+    
 
     plt.figure()
     plt.scatter(df["ext_ratio"],
@@ -109,6 +113,9 @@ def analyze_results(file_path):
     plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
     plt.ylabel("Temperature Rise - K")
     plt.grid()
+    #if save == 'y':
+    #    plt.tight_layout()
+    #    plt.savefig("/home/jaspers2/Desktop/FIG7_training_data_w_opt_points.eps")
     plt.show()
 
     ###########################
@@ -123,22 +130,40 @@ def analyze_results(file_path):
 
     ###########################
     plt.figure(figsize=(12,4))
-    plt.subplot(121)
+    plt.subplot(131)
     plt.scatter(df["coverage"],
                 df["ext_ratio"],
                 s=5)
     plt.ylabel("Extinction Ratio - dB")
-    plt.xlabel("Percent Coverage")
+    plt.xlabel("Percent Coverage\n(a)")
     plt.grid(True)
 
-    plt.subplot(122)
+    plt.subplot(132)
     plt.scatter(df["coverage"],
                 df["dT"],
                 s=5)
     plt.ylabel("Temperature Rise - K")
-    plt.xlabel("Percent Coverage")
+    plt.xlabel("Percent Coverage\n(b)")
     plt.grid(True)
+    
+    plt.subplot(133)
+    plt.scatter(df["ext_ratio"],
+             df["dT"],
+             s=5)
+    plt.scatter(df_opt["ext_ratio"],
+                df_opt["dT"],
+                marker='x')
+    #plt.title("Training Data")
+    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$"+"\n(c)")
+    plt.ylabel("Temperature Rise - K")
+    plt.grid()
+    plt.tight_layout()
+    
+    if save == 'y':
+        #plt.tight_layout()
+        plt.savefig("/home/jaspers2/Desktop/FIG6_perc_coverage.eps")
     plt.show()
+    
     ###########################
     df.plot("coverage","ext_ratio",kind="scatter",ylabel="Extinction Ratio - dB",grid=True)
     df.plot("coverage","dT",kind="scatter",ylabel="Temperature Rise -K",grid=True)

@@ -139,7 +139,7 @@ class Evaluate():
         print('average abs error [%]:', self.error.mean(axis=0)*100)
         print('\n')
 
-    def plot_results(self):
+    def plot_results(self,save='n'):
 
         plt.rcParams['figure.dpi'] = 150
         plt.rcParams['font.size'] = 14     
@@ -166,6 +166,8 @@ class Evaluate():
             ax[i].set_title(title)
             ax[i].grid()
 
+        if save == 'y':
+            fig.savefig('/home/jaspers2/Desktop/FIG7_pred_vs_actual_dT.eps')
         
         for i in range(len(self.network.label_names)):
             plt.figure()

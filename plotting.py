@@ -27,7 +27,7 @@ dataloader = torch.load(trained_model_folder+'/test_dataloader.pkl')
 evaluate = pixel_nn.Evaluate(dataloader, perfnn)
 evaluate.get_preds('cpu')
 evaluate.pred_report()
-evaluate.plot_results()
+evaluate.plot_results(save='y')
 
 ###############################################
 labels = ['Extinction Ratio', 'Temperature Rise']
@@ -76,3 +76,4 @@ axis[1].grid()
 axis[1].set_xticks([0,1,2,3,4],['1','2','3','CB','Train'])
 
 fig.tight_layout()
+fig.savefig('/home/jaspers2/Desktop/FIG9_opt_design_data.eps',bbox_inches = "tight")
