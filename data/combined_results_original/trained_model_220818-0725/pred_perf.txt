@@ -1,0 +1,14 @@
+From NN:
+
+220818-0734
+Final design pred perf:
+ext_ratio: 10.01
+Temp: 284.09
+
+220818-1035
+ext_ratio: 10.22
+Temp: 284.64
+
+220818-1054
+ext_ratio: 10.03
+Temp: 284.98
