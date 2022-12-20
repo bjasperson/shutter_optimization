@@ -1,4 +1,4 @@
-Pixel optimization with random pixel inputs
+Shutter optimization code and datasets.
 
 #Python modules
 - image_creation.py: generates random image designs for data generation. Also can create checkerboard pattern and simulated results for full images.
