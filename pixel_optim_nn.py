@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 26 09:17:17 2022
 
-@author: jaspers2
-"""
 
 import numpy as np
 import torch
@@ -19,9 +15,6 @@ import os
 plt.rcParams['figure.dpi'] = 150
 
 # ref: chandrasekharTOuNNTopologyOptimization2021
-
-# TODO:
-    # readme should include pmax, number epochs, learning rate
 
 class TopNet(nn.Module):
     """
@@ -53,13 +46,7 @@ class TopNet(nn.Module):
         nn.init.xavier_normal_(self.fc4.weight)
         self.fc5 = nn.Linear(20, 2)  # use with softmax option
         nn.init.xavier_normal_(self.fc5.weight)
-        
-        #self.drop_layer1 = nn.Dropout(0) 
-        #self.drop_layer2 = nn.Dropout(0)
-        #self.drop_layer3 = nn.Dropout(0) #was 0.02
-        #self.drop_layer4 = nn.Dropout(0) #was 0.02
-        #self.drop_layer5 = nn.Dropout(0) #was 0.02
-        
+                
         self.l_relu1 = nn.LeakyReLU(0.01) #was 0.1
         self.l_relu2 = nn.LeakyReLU(0.01)
         self.l_relu3 = nn.LeakyReLU(0.01)
@@ -75,7 +62,7 @@ class TopNet(nn.Module):
             self.weightx = self.thk_layer_init(thk_init)
         elif vary_thk == False:
             self.weightx = self.thk_layer_init(thk_init, grad_setting=False)
-            print('WARNING WARNING WARNING: turned requires_grad off on thickness\n')
+            print('WARNING WARNING WARNING: thickness fixed; turned requires_grad off on thickness\n')
 
     def thk_layer_init(self, thk, grad_setting=True):
         """takes normalized initial thk array, creates weightx NN parameters
@@ -84,20 +71,7 @@ class TopNet(nn.Module):
         tensor_thk = torch.tensor(thk).reshape((len(thk), 1, 1))
         return torch.nn.Parameter(tensor_thk).requires_grad_(grad_setting)
 
-    def forward(self, x, p_set, symmetric=False):
-        #option w/ dropout
-        #prev had drop layer on all fc layers
-        # x = self.bn0(x)
-        # x = self.drop_layer1(self.l_relu1(self.fc1(x)))
-        # x = self.bn1(x)
-        # x = self.drop_layer2(self.l_relu2(self.fc2(x)))
-        # x = self.bn2(x)
-        # x = self.drop_layer3(self.l_relu3(self.fc3(x)))
-        # x = self.bn3(x)
-        # x = self.drop_layer4(self.l_relu4(self.fc4(x)))
-        # x = self.bn4(x)
-        # x = self.drop_layer5((self.fc5(x)))
-        
+    def forward(self, x, p_set, symmetric=False):        
         #option w/o dropout
         x = self.bn0(x)
         x = self.l_relu1(self.fc1(x))
@@ -194,9 +168,7 @@ class TopOpt():
         
         #initialize topnet
         self.top_net = TopNet(self.image_shape, (1.,1.), vary_thk)#(0.5, 0.49))
-        
-
-        
+              
         self.optimizer = optim.Adam(
             self.top_net.parameters(), amsgrad=True, lr=self.learning_rate)#, weight_decay=1e-5)
         
@@ -210,8 +182,7 @@ class TopOpt():
         for i,name in enumerate(labels):
             array[i] = targets[i]    
         
-        array_tf = torch.tensor(array)
-        
+        array_tf = torch.tensor(array)     
         target_labels.label_update(array_tf, 'real')
         
         self.target_labels = target_labels
@@ -227,12 +198,12 @@ class TopOpt():
         """
         C,H,W = self.image_shape
         
-        x_loc = [i/W for i in range(1,W+1)] #[float(np.random.rand(1)) for i in range(1,W+1)]
-        y_loc = [i/H for i in range(1,H+1)] #[float(np.random.rand(1)) for i in range(1,H+1)]
+        x_loc = [i/W for i in range(1,W+1)]
+        y_loc = [i/H for i in range(1,H+1)]
 
         # need grid combo, not just all points
         combined_xy = [[y, x] for y in y_loc for x in x_loc]
-        return torch.tensor(combined_xy)#, requires_grad=True)
+        return torch.tensor(combined_xy)
 
     def cust_loss(self, pred_perf_in, alpha):
         #############################
@@ -243,23 +214,16 @@ class TopOpt():
         labels = self.perfnn.label_names
         
         target_ext_ratio = target[0,labels.index('ext_ratio')]
-        #target_insert_loss = target[0,labels.index('insert_loss')]
         target_Temp = target[0,labels.index('Temp')]
         
         pred_ext_ratio = pred[0,labels.index('ext_ratio')]
-        #pred_insert_loss = pred[0,labels.index('insert_loss')]
         pred_Temp = pred[0,labels.index('Temp')]
-        
-        
-        #loss function notes:
         
         loss = (torch.square((target_ext_ratio-pred_ext_ratio)/target_ext_ratio) + 
                 torch.square((target_Temp-pred_Temp)/target_Temp))
-                #torch.square((pred_insert_loss-target_insert_loss)/target_insert_loss) + 
         
         
         error_terms = [abs(target_ext_ratio - pred_ext_ratio).detach().tolist(),
-                        #abs(target_insert_loss - pred_insert_loss).detach().tolist(),
                         abs(target_Temp - pred_Temp).detach().tolist()]
         
         error_terms_labels = ['ext_ratio','Temp']
@@ -297,13 +261,11 @@ class TopOpt():
         C,H,W = self.image_shape
         target = self.top_net.weightx*float(initial_density)*torch.ones(1,int(H),int(W)) #density funct is 1 channel only
         target = target[None]
-        #print(target)
         
         for i in range(num_epochs):
             images = self.top_net(self.input_xy, 1,symmetric=True)
             images = images[None]
             loss = ((target-images)**2).sum()
-            
             
             if i % 100 == 0:
                 print("pretrain loss: ",loss)
@@ -334,13 +296,13 @@ class TopOpt():
             # no need to normalize images first b/c using "normalized" layer thicknesses
             
             images = self.top_net(self.input_xy, p_set, symmetric=self.symmetric)  # tensor [N_batch,2]
-            images = images[None]  # adds axis, [1,2,20,20]
+            images = images[None]  #add axis
             if i == 0:
                 self.plot_images(images, 'initial image')
             pred_label = self.perfnn(images)
             predicted_perf.label_update(pred_label, 'normalized')
             
-            #this is my current "best guess"
+            #this is current "best guess"
             if 'Temp' in self.perfnn.label_names:
                 objective, error_terms_in, error_labels_in = self.cust_loss(predicted_perf, alpha)
             elif 'dT' in self.perfnn.label_names:
@@ -348,9 +310,8 @@ class TopOpt():
 
             #backpropogation
             self.optimizer.zero_grad()
-            loss = objective  # + alpha*pow(vol_constraint,2)
+            loss = objective
             loss.backward(retain_graph=True)
-            #torch.nn.utils.clip_grad_norm_(self.top_net.parameters(),0.1)
             self.optimizer.step()
 
             error_terms.append(error_terms_in)
@@ -361,7 +322,7 @@ class TopOpt():
             p_set = min(p_set+delta_p, p_max)
 
             ##########
-            # print thicknesses (rescale first!)
+            # print rescaled thicknesses
             thicknesses = np.array(self.top_net.weightx.tolist())
             thicknesses_scaled = self.rescale_thk(thicknesses)
 
@@ -381,7 +342,7 @@ class TopOpt():
         # get/show final perforamcne
         self.top_net.eval()
         images = self.top_net(self.input_xy, p_set, symmetric=self.symmetric)  # tensor [N_batch,2]
-        images = images[None]  # adds axis, [1,2,20,20]
+        images = images[None]  # adds axis
         predicted_perf.label_update(self.perfnn(images), 'normalized')        
 
         predicted_perf.scale_labels()
@@ -394,7 +355,6 @@ class TopOpt():
 
        
     def print_predicted_performance(self): 
-        #print('Final design pred perf:\n',labels,'\n',self.predicted_perf)
         print('--------')
         print('Final design pred perf:')
         
@@ -582,7 +542,6 @@ def vis_model_weights(model,layer):
 
 def main():
     # set True to use GPU, False to use CPU
-    print("Warning: changed loss function")
     device = use_gpu(False)
     
     perf_nn_folder = input('trained_model_[date] folder: ')
@@ -606,7 +565,8 @@ def main():
             #orig Temp selection was 10 dB, 285 K
             top_opt.set_targets(perfnn.label_names, (10,285))
         elif 'dT' in perfnn.label_names:
-            top_opt.set_targets(perfnn.label_names, (10, 20))
+            #modified to use dT instead of temp
+            top_opt.set_targets(perfnn.label_names, (10, 15))
     elif target_choice == '2':
         #for dummy data, slightly different targets
         top_opt.set_targets(perfnn.label_names, (20, 10))    

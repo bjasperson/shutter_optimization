@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 25 12:01:38 2021
 
-@author: jaspers2
-"""
 
 import numpy as np
 import pandas as pd
@@ -167,7 +163,8 @@ class Evaluate():
             ax[i].grid()
 
         if save == 'y':
-            fig.savefig('/home/jaspers2/Desktop/FIG7_pred_vs_actual_dT.eps')
+            save_loc = input("plot save location: ")
+            fig.savefig(save_loc + '/FIG7_pred_vs_actual_dT.eps')
         
         for i in range(len(self.network.label_names)):
             plt.figure()

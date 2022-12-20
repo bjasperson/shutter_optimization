@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Feb  8 12:48:41 2022
 
-@author: jaspers2
-"""
 import torch
 import torch.nn as nn
 import numpy as np
@@ -68,23 +64,12 @@ def norm_images(images,stats):
     
     return normed_images
 
-def rescale_thk(thk_in,stats):
-    code = stats['image_norm_code']
-    
-    if code == 1:
-        raise Exception("rescale not defined")
-    elif code == 2:
-        raise Exception("rescale not defined")
-    elif code == 3:
-        raise Exception("rescale not defined")
-
 
 def label_norm_factors(stats, df=torch.empty(1)):
     if type(df) != torch.tensor:
         raise Exception('input to label_norm_factors must be tensor')
     code = stats['label_norm_code']
     
-
     if code == []:
         stats['denom_factor'] = 1
         stats['centering_factor'] = 1
@@ -105,6 +90,7 @@ def label_norm_factors(stats, df=torch.empty(1)):
         stats['log(Tr_met)_std'] = np.log(df['Tr_met'].std())
 
     return stats
+
 
 def norm_labels(labels_array, stats):
     """takes torch.Tensor labels array and stats, returns normalized labels.
@@ -195,8 +181,8 @@ class Network(nn.Module):
         self.label_names = input_data.labels_names
     
 class Network10(Network):  
-    def __init__(self, input_data, out_chnl = [10], kernel_size = [3], stride_size = [3], padding_size = [3]): #was 512               
-        """
+    def __init__(self, input_data, out_chnl = [10], kernel_size = [3], stride_size = [3], padding_size = [3]):              
+        """Network used in published paper
         """
         super().__init__(input_data)
         
@@ -223,14 +209,14 @@ class Network10(Network):
         
         
         self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(out_chnl[-1]*out_size**2, num_labels)  #last 3x dims going into reshaping (was 96*496*496 for 500 pixel)        
+        self.fc1 = nn.Linear(out_chnl[-1]*out_size**2, num_labels)  #last 3x dims going into reshaping      
         
-        #dropout
+        #dropout option (0 means off, was 0.02)
         self.drop_layer1 = nn.Dropout(0) 
         self.drop_layer2 = nn.Dropout(0)
-        self.drop_layer3 = nn.Dropout(0) #was 0.02
-        self.drop_layer4 = nn.Dropout(0) #was 0.02
-        self.drop_layer5 = nn.Dropout(0) #was 0.02
+        self.drop_layer3 = nn.Dropout(0)
+        self.drop_layer4 = nn.Dropout(0) 
+        self.drop_layer5 = nn.Dropout(0) 
         
     def forward(self, x):
         

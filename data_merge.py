@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun  8 06:21:55 2022
-
-@author: jaspers2
-"""
 
 import numpy as np
 import pandas as pd
@@ -31,7 +26,7 @@ def main():
         df_images = import_images(image_folder)
         df_results = import_results(results_folder)
         
-        #
+        #combine results and save
         df_combined = combined_results(df_images,df_results)
         df_combined, np_combined_images, np_reduced_images, df_combined_results, readme = nn_config(df_combined,readme)
         save_results(combined_results_folder, df_combined, np_combined_images, np_reduced_images, df_combined_results, readme)
@@ -41,7 +36,10 @@ def main():
         if check == False:
             combined_results_folder = input("combined results folder: ")
         save = input("save results (y/n)?   ")
-        analyze_results(combined_results_folder,save)  
+        save_loc = ""
+        if save == 'y':
+            save_loc = input("save location: ")
+        analyze_results(combined_results_folder, save, save_loc)  
         
 
 def import_images(folder):
@@ -76,7 +74,7 @@ def import_results(folder):
     
     return df
 
-def analyze_results(file_path,save):
+def analyze_results(file_path,save, save_loc=""):
     """perform any analysis on results as needed
     """
     df = pd.read_pickle(file_path+"/df_all.pkl")
@@ -98,10 +96,10 @@ def analyze_results(file_path,save):
     plt.grid()
     if save == 'y':
         plt.tight_layout()
-        plt.savefig("/home/jaspers2/Desktop/training_data.eps")
+        plt.savefig(save_loc + "/training_data.eps")
     plt.show()
     
-
+    ###########################
     plt.figure()
     plt.scatter(df["ext_ratio"],
              df["dT"],
@@ -113,9 +111,9 @@ def analyze_results(file_path,save):
     plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
     plt.ylabel("Temperature Rise - K")
     plt.grid()
-    #if save == 'y':
-    #    plt.tight_layout()
-    #    plt.savefig("/home/jaspers2/Desktop/FIG7_training_data_w_opt_points.eps")
+    if save == 'y':
+        plt.tight_layout()
+        plt.savefig(save_loc + "/training_data_w_opt_points.eps")
     plt.show()
 
     ###########################
@@ -161,7 +159,7 @@ def analyze_results(file_path,save):
     
     if save == 'y':
         #plt.tight_layout()
-        plt.savefig("/home/jaspers2/Desktop/FIG6_perc_coverage.eps")
+        plt.savefig(save_loc + "/FIG6_perc_coverage.eps")
     plt.show()
     
     ###########################

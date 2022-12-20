@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Generate study matrix and folder of images for pixel optimization
-Created on Fri Dec 17 10:28:05 2021
-
-@author: jaspers2
-"""
 
 import numpy as np
 import datetime
 import os
 import itertools
-import pandas as pd
 import matplotlib.pyplot as plt
 
-
-master_directory = '/home/jaspers2/Documents/pixel_optimization/'
 
 class Image():
     
@@ -70,6 +61,7 @@ class Image():
         self.images = image_array
         
     def create_thk_images(self):
+        #convert binary images to pixel "thickness" images
         thk_array = np.array(self.thk).reshape(len(self.thk),1,1)
         self.images_w_thk = self.images*thk_array
     
@@ -77,7 +69,8 @@ class Image():
         feature_image = self.images_w_thk
         thk = self.thk
         timestamp = create_timestamp()
-        path = folder_create(timestamp)
+        master_directory = input('directory for timestamped folder creation:')
+        path = folder_create(timestamp,master_directory)
         np.save(os.path.join(path,timestamp + '_images'),feature_image)
         
         #readme
@@ -90,15 +83,16 @@ class Image():
         self.save_comsol_inputs(path, timestamp)
         
         #simulated results
-        if input('generate (20x20 symmetric) simulated results? y to gen/save:   ') == 'y':
-            target_image, labels, fake_results = simulated_sym_results(self.images)
-            target_image = target_image[:10,:10]
-            
-            reduced_images = feature_image[:,:,:10,:10]
-            np.save(os.path.join(path,timestamp + '_reduced_images'),reduced_images)
-            
-            np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '',delimiter=",")
-            np.save(os.path.join(path,'target_image'),target_image)
+        if feature_image.shape[2] == 20:
+            if input('generate (20x20 symmetric) simulated results? y to gen/save:   ') == 'y':
+                target_image, labels, fake_results = simulated_sym_results(self.images)
+                target_image = target_image[:10,:10]
+                
+                reduced_images = feature_image[:,:,:10,:10]
+                np.save(os.path.join(path,timestamp + '_reduced_images'),reduced_images)
+                
+                np.savetxt(os.path.join(path,'final_comsol_results.csv'),fake_results,header=labels,comments = '',delimiter=",")
+                np.save(os.path.join(path,'target_image'),target_image)
         
 
     def save_comsol_inputs(self, path, timestamp):
@@ -121,13 +115,6 @@ class Image():
                 f.write(bits_file)
        
 
-def random_gen(N_pts, N_pixels_width):
-    rand_array = np.random.rand(N_pts,1,N_pixels_width,N_pixels_width)
-    rand_array[rand_array>=0.5] = 1
-    rand_array[rand_array<0.5] = 0
-    
-    return rand_array
-
 def random_gen_2(N_pts,N_pixels_width):
     rand_array = np.random.rand(N_pts,1,N_pixels_width,N_pixels_width)
     
@@ -140,7 +127,7 @@ def random_gen_2(N_pts,N_pixels_width):
 
 def random_gen_4(N_pts, N_pixels_width, input_percent_coverage = []):
     """improved random gen with x and y symmetry
-    only works for even N_pts for now
+    only works for even N_pts
     """
     #determine number of pixels in upper left corner
     N_corner_width = int(N_pixels_width//2 + N_pixels_width%2)
@@ -180,7 +167,6 @@ def checkboard(N_pixels_width):
     """generate checkboard design
     """
     #determine number of pixels in upper left corner
-    
     start_pt = [[1+4*i,2+4*j] for i in range(5) for j in range(5)]
     array = np.zeros((2,1,N_pixels_width,N_pixels_width))
     for pt in start_pt:
@@ -189,7 +175,6 @@ def checkboard(N_pixels_width):
         array[0,0,pt[0],pt[1]-1] = 1
         array[0,0,pt[0]+1,pt[1]-1] = 1
 
-    
     #add second checkerboard, inverse to first
     #this gives 75% coverage
     array[1,0] = array[0,0]
@@ -211,10 +196,8 @@ def simulated_sym_results(images):
     
     loss = abs(images - target_image)
     loss = (loss.sum(axis=(2,3)).reshape(-1))/4 #divide by 4: symmetric
-    
-    perc_cov = (images.sum(axis=(2,3))/(H*W)).reshape(-1)
-    
-    #legacy approach that worked, refactored for ext ratio and dT
+        
+    #Tr data converted to ext ratio and dT
     Tr_ins = 1-0.5*loss/max(loss)
     Tr_met = 0.5*loss/max(loss)
     Tr_ins[Tr_ins<0.01] = 0.01
@@ -222,10 +205,6 @@ def simulated_sym_results(images):
 
     ext_ratio = 10*np.log10(Tr_ins/Tr_met)
     dT = 10*(1-(loss/max(loss)))
-    
-    #experimental approach
-    #ext_ratio = 11*np.sin((np.pi/2)*perc_cov)
-    #dT = 10*(np.exp(-(loss)/20))
             
     out = np.array((ext_ratio, dT)).transpose()
     out[out==0] = 0.001
@@ -235,7 +214,7 @@ def simulated_sym_results(images):
     return target_image, labels, out
     
 
-def folder_create(timestamp):
+def folder_create(timestamp, master_directory):
     """create folder with timestamp, save readme file
     """
     new_directory = os.path.join(master_directory,timestamp)
