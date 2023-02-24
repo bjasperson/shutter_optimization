@@ -540,33 +540,35 @@ def vis_model_weights(model,layer):
     plt.show()
 
 
-def main():
+def top_opt_funct(perf_nn_folder, 
+                  target_choice = 1, 
+                  target_db = 10, 
+                  print_details=False):
     # set True to use GPU, False to use CPU
-    device = use_gpu(False)
-    
-    perf_nn_folder = input('trained_model_[date] folder: ')
+    device = use_gpu(False)  
         
     # only use during debugging (slows code)
     torch.autograd.set_detect_anomaly(True)
     
     #load perf_nn
     perfnn = load_perfnet(perf_nn_folder)
-        
+    
     #initilize top_opt
     top_opt = TopOpt(perfnn, .001, device, False, symmetric=False)
     
-    print('Trainable parameters:', sum(p.numel()
-          for p in top_opt.top_net.parameters() if p.requires_grad))
-    
-    target_choice = input('1) Actual or 2) dummy data?  ')    
+    if print_details == True:
+        print('Trainable parameters:', sum(p.numel()
+            for p in top_opt.top_net.parameters() if p.requires_grad))
+        
+        
     if target_choice == '1':
         #for use with actual data
         if 'Temp' in perfnn.label_names:
             #orig Temp selection was 10 dB, 285 K
-            top_opt.set_targets(perfnn.label_names, (10,285))
+            top_opt.set_targets(perfnn.label_names, (target_db,285))
         elif 'dT' in perfnn.label_names:
             #modified to use dT instead of temp
-            top_opt.set_targets(perfnn.label_names, (10, 15))
+            top_opt.set_targets(perfnn.label_names, (target_db, 15))
     elif target_choice == '2':
         #for dummy data, slightly different targets
         top_opt.set_targets(perfnn.label_names, (20, 10))    
@@ -575,26 +577,34 @@ def main():
     p_max = 2
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()
+
+    if print_details == True:    
+        plt.plot(np.array(top_opt.loss))
+        plt.title('Optimizing loss')
+        plt.show()
         
-    plt.plot(np.array(top_opt.loss))
-    plt.title('Optimizing loss')
-    plt.show()
+        plt.hist(top_opt.top_net.rho.detach().numpy().reshape(-1))
+        plt.title(r'Distribution of $\rho$ ')
+        plt.show()
     
-    plt.hist(top_opt.top_net.rho.detach().numpy().reshape(-1))
-    plt.title(r'Distribution of $\rho$ ')
-    plt.show()
-    
-    plot_error(top_opt.error_terms, top_opt.error_labels)
+        plot_error(top_opt.error_terms, top_opt.error_labels)
     
     if target_choice == '2': #if dummy data selection
         if input('compare with target (dummy data only)? y to compare:  ') == 'y':
             base_model_folder = input('base model folder: ')
             compare_prediction(top_opt.images, base_model_folder)
-        
-    if input('save results? y to save:  ') == 'y':
-        top_opt.save_results(perf_nn_folder)
 
     return top_opt
+
+
+def main():
+    perf_nn_folder = input('trained_model_[date] folder: ')
+    target_choice_in = input('1) Actual or 2) dummy data?  ')
+    top_opt = top_opt_funct(perf_nn_folder, 
+                  target_choice = target_choice_in,
+                  print_details = True)
+    if input('save results? y to save:  ') == 'y':
+        top_opt.save_results(perf_nn_folder)
 
 
 if __name__ == '__main__':
