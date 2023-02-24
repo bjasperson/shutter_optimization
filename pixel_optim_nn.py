@@ -391,6 +391,9 @@ class TopOpt():
         
         #make folder
         new_directory = os.path.join(path, 'optimized_design_'+timestamp)
+        while os.path.exists(new_directory):
+            new_directory+='-1'
+        
         os.mkdir(new_directory)
         print("directory created: ", new_directory)
         
@@ -541,7 +544,7 @@ def vis_model_weights(model,layer):
 
 
 def top_opt_funct(perf_nn_folder, 
-                  target_choice = 1, 
+                  target_choice = '1', 
                   target_db = 10, 
                   print_details=False):
     # set True to use GPU, False to use CPU
