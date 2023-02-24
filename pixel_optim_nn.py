@@ -386,7 +386,7 @@ class TopOpt():
 
         return
 
-    def save_results(self, path):
+    def save_results(self, path, return_directory = False):
         timestamp = image_creation.create_timestamp()
         
         #make folder
@@ -401,6 +401,8 @@ class TopOpt():
         torch.save(self.top_net.state_dict(), new_directory + '/trained_model.pth')
         with open(new_directory + '/top_opt_network.pkl', 'wb') as outp:
             pickle.dump(self.top_net, outp, pickle.HIGHEST_PROTOCOL)
+        with open(new_directory + '/top_opt.pkl', 'wb') as outp:
+            pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
         
         # save image
         image = image_creation.Image()
@@ -435,9 +437,20 @@ class TopOpt():
         self.target_labels.scale_labels()
         targets = self.target_labels.labels
         readme += f'target values: {targets} \n'
+        readme += 'Description of files:\n'
+        readme += '-csv: fabrication\n'
+        readme += '-bits: comsol input\n'
+        readme += '-npy: images\n'
+        readme += '-pth: top opt state dictionary\n'
+        readme += 'top_opt_network.pkl: top opt network\n'
+        readme += 'top_opt.pkl: full top opt\n'
+
         
         with open(os.path.join(new_directory,'readme.txt'),'w') as output:
             output.write(readme)
+
+        if return_directory == True:
+            return new_directory
 
 
 def use_gpu(use_gpu):
