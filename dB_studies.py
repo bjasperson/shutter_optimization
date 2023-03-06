@@ -7,18 +7,20 @@ import pickle
 import glob
 from image_creation import create_timestamp
 import os
+import torch
 
 def generate(save_folder, dB_range = (2,15), n_dB = 50):
     dB_values = np.linspace(dB_range[0],dB_range[1],n_dB).tolist()
     data_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
-    images, target_dB_list, pred_dB_list, pred_dT_list, path_list,bits_list = [],[],[],[],[],[]
+    images, images_tf, target_dB_list, pred_dB_list, pred_dT_list, path_list,bits_list = [],[],[],[],[],[],[]
     unique_id_list = []
 
     timestamp = create_timestamp()
     
     for i,dB in enumerate(dB_values):
         top_opt_current = pixel_optim_nn.top_opt_funct(data_folder,
-                                            target_db = dB)
+                                                       target_db = dB,
+                                                       num_epochs = 2000)
         path = top_opt_current.save_results(save_folder, return_directory = True)
         
         #get bits
@@ -28,6 +30,7 @@ def generate(save_folder, dB_range = (2,15), n_dB = 50):
                 bits = openfile.read()
         
         images.append(top_opt_current.images.detach().numpy()[0][0])
+        images_tf.append(top_opt_current.images.detach().numpy())
         pred_dB, pred_dT = top_opt_current.predicted_perf.labels.tolist()[0]
         target_dB_list.append(dB)
         pred_dB_list.append(pred_dB)
@@ -37,6 +40,7 @@ def generate(save_folder, dB_range = (2,15), n_dB = 50):
         unique_id_list.append(timestamp + '-' + str(i))
     
     data = {'images':images,
+            'images_tf':images_tf,
             'target_dB':target_dB_list,
             'pred_dB':pred_dB_list,
             'pred_dT':pred_dT_list,
@@ -63,16 +67,16 @@ def load_comsol_results(df_nn, folder = ''):
     """
     if folder == '':
         folder = input('folder of results: ')
-    df = pd.DataFrame()
+    df_c = pd.DataFrame()
     for file in os.listdir(folder):
         df_in = pd.read_csv(os.path.join(folder,file),index_col='id')
         
-        df = pd.concat([df,df_in])
-        df = df.groupby("id").first()
+        df_c = pd.concat([df_c,df_in])
+        df_c = df_c.groupby("id").first()
 
-    df["ext_ratio"] = 10*np.log10(df["Tr_ins"]/df["Tr_met"])
-    df["insert_loss"] = 10*np.log10(1/df["Tr_ins"])
-    df["dT"] = df["T_VO2_avg"]-273.15
+    df_c["ext_ratio"] = 10*np.log10(df_c["Tr_ins"]/df_c["Tr_met"])
+    df_c["insert_loss"] = 10*np.log10(1/df_c["Tr_ins"])
+    df_c["dT"] = df_c["T_VO2_avg"]-273.15
     #df = df.set_index("id") 
 
     #legacy issue
@@ -81,32 +85,150 @@ def load_comsol_results(df_nn, folder = ''):
 
     df_nn = df_nn.set_index('id')
 
-    combined = pd.concat([df_nn,df],axis=1)
+    combined = pd.concat([df_nn,df_c],axis=1)
 
     return combined
 
 
-def plotting(df, n_plt_w = 3, n_plt_h = 3):
-    #subplots of select designs
-    i=0
-    j=0
-    # pred_dB_list = []
-    # pred_dT_list = []
-    fig,axs = plt.subplots(n_plt_h,n_plt_w)    
-    n_plt = n_plt_w*n_plt_h
+# def plot_design_grid(df, n_plt_w = 3, n_plt_h = 3, filtering = False,
+#              save_fig = False):
+#     #this is plotting a rep design in middle of range, 
+#     #NOT the best one. Likely can be removed
+#     #subplots of select designs
+#     i=0
+#     j=0
+#     fig,axs = plt.subplots(n_plt_h,n_plt_w)    
+#     n_plt = n_plt_w*n_plt_h
 
-    n_df = df.shape[0]
-    data_pt = [round(i*(n_df/(n_plt-1)))for i in range(n_plt-1)]
-    data_pt.append(n_df-1)
-    for p in data_pt:
-        current = df.iloc[p]
-        image = current.images
+#     n_df = df.shape[0]
+#     data_pt = [round(i*(n_df/(n_plt-1)))for i in range(n_plt-1)]
+#     data_pt.append(n_df-1)
+#     for p in data_pt:
+#         current = df.iloc[p]
+#         image = current.images
+#         image = np.concatenate((image,np.flip(image,0)),axis=0)
+#         image = np.concatenate((image,np.flip(image,1)),axis=1)
+#         if filtering == True:
+#             image[image<0.5] = 0
+#             image[image>=0.5] = 1
+#         axs[i,j].imshow(image)
+#         axs[i,j].get_xaxis().set_visible(False)
+#         axs[i,j].get_yaxis().set_visible(False)
+#         axs[i,j].set_title(f"{p}: dT={current.pred_dT:.1f}, dB={current.pred_dB:.1f} ({current.target_dB:.1f})", fontsize=8)
+
+#         if j<(n_plt_w-1):
+#             j+=1
+#         else:
+#             i+=1
+#             j=0
+
+
+def plot_extRatio_vs_dT(df, filtering = False,
+             save_fig = False):
+    #create the ext_ratio vs dT plot, with pareto front
+    file_path = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
+    df_comsol = pd.read_pickle(file_path+"/df_all.pkl")
+    df_comsol["dT"] = df_comsol["T_VO2_avg"] - 273.15
+    
+    col_names = ['pred_dB','pred_dT']
+    if 'ext_ratio' in df.columns:
+        col_names.extend(['ext_ratio','dT'])
+    
+    df_opt = df[col_names]
+    #df_opt = df_opt.rename(columns={'pred_dB':'ext_ratio','pred_dT':'dT'})
+    
+    #drop nas for now
+    df_opt = df_opt.dropna()
+
+    fig,ax = plt.subplots()
+    #plt.figure()
+    ax.scatter(df_comsol["ext_ratio"],
+                df_comsol["dT"],
+                label='Training',
+                s=5)
+    
+    if "ext_ratio" in df_opt.columns:
+        ax.scatter(df_opt["ext_ratio"],
+                    df_opt["dT"],
+                    marker='o',
+                    label='COMSOL Verified')
+    ax.scatter(df_opt["pred_dB"],
+                df_opt["pred_dT"],
+                marker='x',
+                label='NN Prediction')
+    #ax.set_title("Training Data vs. TopOptNN output")
+    ax.set_xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
+    ax.set_ylabel("Temperature Rise - K")
+    ax.legend()
+    ax.grid(True)
+    plt.show()
+    if save_fig == True:
+        fig.savefig('/home/jaspers2/Desktop/FIG11a_dB.eps',bbox_inches = "tight")
+
+def plot_best_comsol(df,db_min, db_max, filtering=False):
+
+    
+    df_filtered = df.loc[(df['ext_ratio'] > db_min) & (df['ext_ratio'] < db_max)]
+    df_best = df_filtered[df_filtered['dT'] == df_filtered['dT'].max()]
+    image = df_best['images'][0]
+    image = np.concatenate((image,np.flip(image,0)),axis=0)
+    image = np.concatenate((image,np.flip(image,1)),axis=1)
+    if filtering == True:
+        image[image<0.5] = 0
+        image[image>=0.5] = 1
+    fig,ax = plt.subplots()
+    ax.set_title(f"Max Temperature Candidate, {db_min} to {db_max} dB")
+    ax.imshow(image)
+
+    return ax
+
+def isolate_best_comsol(df, n_best_pts, db_range = []):
+    df = df.reset_index()
+    if db_range == []:
+        db_min = df.ext_ratio.min()
+        db_max = df.ext_ratio.max()
+    else:
+        db_min = db_range[0]
+        db_max = db_range[1]
+    db_range_array = np.linspace(db_min, db_max, n_best_pts)
+    df_pareto = []
+
+    for k in range(n_best_pts-1):
+        db_target_min = db_range_array[k]
+        db_target_max = db_range_array[k+1]
+        df_filtered = (df.loc[(df['ext_ratio'] > db_target_min) & (df['ext_ratio'] < db_target_max)])
+        df_best = df_filtered[df_filtered['dT'] == df_filtered['dT'].max()]
+        if len(df_out) == 0:
+            raise Exception('distance b/w target DBs is too small to find a datapoint')
+        df_pareto.append(df_best.to_dict(orient='records')[0])
+
+    df_pareto = pd.DataFrame(df_pareto)
+    return df_pareto
+
+
+def plot_best_comsol_designs(df, db_ranges, filtering = False, save_fig = False):
+    n_plts = len(db_ranges)-1
+    n_plt_h = round(n_plts**.5)
+    n_plt_w = n_plts//n_plt_h + (n_plts%n_plt_h > 0)
+    fig,axs = plt.subplots(n_plt_h, n_plt_w, figsize=(6,6))
+    i,j=0,0
+    for k in range(len(db_ranges)-1):
+        
+        db_min = db_ranges[k]
+        db_max = db_ranges[k+1]
+        
+        df_filtered = df.loc[(df['ext_ratio'] > db_min) & (df['ext_ratio'] < db_max)]
+        df_best = df_filtered[df_filtered['dT'] == df_filtered['dT'].max()]
+        image = df_best['images'][0]
         image = np.concatenate((image,np.flip(image,0)),axis=0)
         image = np.concatenate((image,np.flip(image,1)),axis=1)
-        axs[i,j].imshow(image)
+        if filtering == True:
+            image[image<0.5] = 0
+            image[image>=0.5] = 1
+        axs[i,j].set_title(f"{float(df_best['ext_ratio']):.1f} dB, {float(df_best['dT']):.1f} K")
         axs[i,j].get_xaxis().set_visible(False)
         axs[i,j].get_yaxis().set_visible(False)
-        axs[i,j].set_title(f"{p}: dT={current.pred_dT:.1f}, dB={current.pred_dB:.1f} ({current.target_dB:.1f})", fontsize=8)
+        axs[i,j].imshow(image)
 
         if j<(n_plt_w-1):
             j+=1
@@ -114,45 +236,30 @@ def plotting(df, n_plt_w = 3, n_plt_h = 3):
             i+=1
             j=0
 
+    #fig.suptitle('Best Performing Designs (FEM results)')
+    fig.show()
 
-    #create the ext_ratio vs dT plot, with pareto front
-    file_path = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
-    df_comsol = pd.read_pickle(file_path+"/df_all.pkl")
-    df_comsol["dT"] = df_comsol["T_VO2_avg"] - 273.15
-    df_opt = df[['ext_ratio','dT','pred_dB','pred_dT']]
-    #df_opt = df_opt.rename(columns={'pred_dB':'ext_ratio','pred_dT':'dT'})
+    if save_fig == True:
+        fig.savefig('/home/jaspers2/Desktop/FIG11b_best.eps',bbox_inches = "tight")
+
+    return 
+
+
+def save_pdf(df, folder, filtered = False):
     
-    #drop nas for now
-    df_opt = df_opt.dropna()
+    if filtered == True:
+        name = folder+'/all_images_filtered.pdf'
+    elif filtered == False:
+        name = folder+'/all_images.pdf'
 
-    plt.figure()
-    plt.scatter(df_comsol["ext_ratio"],
-                df_comsol["dT"],
-                label='Training',
-                s=5)
-    plt.scatter(df_opt["ext_ratio"],
-                df_opt["dT"],
-                marker='o',
-                label='COMSOL Verified')
-    plt.scatter(df_opt["pred_dB"],
-                df_opt["pred_dT"],
-                marker='x',
-                label='NN Prediction')
-    #plt.title("Training Data")
-    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
-    plt.ylabel("Temperature Rise - K")
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-   
-def save_pdf(df, folder):
-
-    with PdfPages(folder+'/all_images.pdf') as pdf:
+    with PdfPages(name) as pdf:
         for p,current in df.iterrows():
             image = current.images
             image = np.concatenate((image,np.flip(image,0)),axis=0)
             image = np.concatenate((image,np.flip(image,1)),axis=1)
+            if filtered == True:
+                image[image<0.5] = 0
+                image[image>=0.5] = 1
             fig,axs = plt.subplots(1,1)   
             axs.imshow(image)
             axs.get_xaxis().set_visible(False)
@@ -172,13 +279,75 @@ def save_bits(df, save_folder):
         with open(filename,"w") as text_file:
             text_file.write(bits_str)
 
-def main():
-    base_folder = '/home/jaspers2/Documents/pixel_optimization/dB_study/230225-1625'
-    df = load_nn_data(base_folder)
-    df = load_comsol_results(df, base_folder + '/results')
-    plotting(df)
-    save_pdf(df, base_folder)
+
+def get_prediction(np_image, perfnet):
+
+    pred_tf = perfnet(torch.tensor(np_image))
+
+    pred = pixel_optim_nn.Labels(perfnet)
+    pred.label_update(pred_tf,'normalized')
+    pred.scale_labels()
+    
+    return pred.labels.tolist()
+
+def add_filtered_image_perf(df, perfnn):
+    pred_dB_filtered, pred_dT_filtered = [],[]
+    for i,row in df.iterrows():
+        filtered_image = row['images_tf']
+        filtered_image[filtered_image<0.5] = 0
+        filtered_image[filtered_image>=0.5] = 1
+        pred_filtered = get_prediction(filtered_image, perfnn)[0]
+        pred_dB_filtered.append(pred_filtered[0])
+        pred_dT_filtered.append(pred_filtered[1])
+
+    df['pred_dB_filtered_image'] = pred_dB_filtered
+    df['pred_dT_filtered_image'] = pred_dT_filtered
+        
     return df
 
+def add_error(df):
+    df['nn_db_error'] = abs(df['target_dB'] - df['pred_dB'])
+    df['nn_comsol_error'] = abs(df['target_dB'] - df['ext_ratio'])
+    df['nn_dT_error'] = df['pred_dT'] - df['dT']
+
+    fig,ax = plt.subplots()
+    ax.plot(df['target_dB'],df['nn_db_error'],label='NN')
+    ax.plot(df['target_dB'],df['nn_comsol_error'],label='COMSOL')
+    ax.set_xlabel('Target Ext. Ratio [dB]')
+    ax.set_ylabel('Absolute Error, Predicted Ext. Ratio [dB]')
+    fig.legend()
+    plt.show()
+
+    fig,ax = plt.subplots()
+    ax.scatter(df['target_dB'],df['nn_dT_error'])
+    ax.set_xlabel('Target Ext. Ratio [dB]')
+    ax.set_ylabel('dT Error, NN-FEM [K]')
+    fig.legend()
+    plt.show()
+
+
+    return df
+
+def main():
+    #base_folder = '/home/jaspers2/Documents/pixel_optimization/dB_study/230225-1625'
+    base_folder = '/home/jaspers2/Documents/pixel_optimization/dB_study/230308-0707'
+    df = load_nn_data(base_folder)
+    df = load_comsol_results(df, base_folder + '/results')
+    df = add_error(df)
+    #plotting(df, save_fig = False)
+    save_pdf(df, base_folder)
+
+    db_ranges = [0,2,4,6,8,10,12,15,16,17]
+    plot_best_comsol_designs(df, db_ranges, filtering = True, save_fig = False)
+
+    model_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
+    model = pixel_optim_nn.load_perfnet(model_folder)
+    return df, model
+
 if __name__ == '__main__':
-    df = main()
+    df_out, perfnet = main()
+    df_out = add_filtered_image_perf(df_out, perfnet)
+    df_pareto = isolate_best_comsol(df_out, 10)
+
+
+    

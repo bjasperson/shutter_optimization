@@ -559,7 +559,8 @@ def vis_model_weights(model,layer):
 def top_opt_funct(perf_nn_folder, 
                   target_choice = '1', 
                   target_db = 10, 
-                  print_details=False):
+                  print_details=False,
+                  num_epochs = 3_000):
     # set True to use GPU, False to use CPU
     device = use_gpu(False)  
         
@@ -589,7 +590,7 @@ def top_opt_funct(perf_nn_folder,
         #for dummy data, slightly different targets
         top_opt.set_targets(perfnn.label_names, (20, 10))    
     
-    num_epochs = 3_000
+    
     p_max = 2
     top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
     top_opt.print_predicted_performance()

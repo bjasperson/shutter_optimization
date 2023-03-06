@@ -148,9 +148,9 @@ def analyze_results(file_path,save, save_loc=""):
     plt.scatter(df["ext_ratio"],
              df["dT"],
              s=5)
-    plt.scatter(df_opt["ext_ratio"],
-                df_opt["dT"],
-                marker='x')
+    # plt.scatter(df_opt["ext_ratio"],
+    #             df_opt["dT"],
+    #             marker='x')
     #plt.title("Training Data")
     plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$"+"\n(c)")
     plt.ylabel("Temperature Rise - K")
