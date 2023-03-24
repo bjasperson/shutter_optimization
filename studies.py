@@ -1,4 +1,5 @@
 import pixel_optim_nn
+import pixel_nn
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -9,7 +10,7 @@ from image_creation import create_timestamp
 import os
 import torch
 
-def generate(save_folder, dB_range = (2,15), n_dB = 50):
+def generate(save_folder, dB_range = (2,15), n_dB = 100, p_max_in = 2):
     dB_values = np.linspace(dB_range[0],dB_range[1],n_dB).tolist()
     data_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
     images, images_tf, target_dB_list, pred_dB_list, pred_dT_list, path_list,bits_list = [],[],[],[],[],[],[]
@@ -18,9 +19,12 @@ def generate(save_folder, dB_range = (2,15), n_dB = 50):
     timestamp = create_timestamp()
     
     for i,dB in enumerate(dB_values):
+        print(f'running dB={dB}')
         top_opt_current = pixel_optim_nn.top_opt_funct(data_folder,
                                                        target_db = dB,
-                                                       num_epochs = 2000)
+                                                       num_epochs = 3000,
+                                                       p_max = p_max_in,
+                                                       print_details = False)
         path = top_opt_current.save_results(save_folder, return_directory = True)
         
         #get bits
@@ -51,6 +55,89 @@ def generate(save_folder, dB_range = (2,15), n_dB = 50):
     df = pd.DataFrame(data)
     df.to_pickle(save_folder+'/dB_study_data.pkl')
     return df
+
+
+def simp_p_study(df = '', save_results = False):
+    
+    if len(df) == 0:
+        p_range_max = 6 
+        p_range_min = 1
+        p_step = .5
+        num_it = 15
+        num_epochs = 3000
+        p_range = np.arange(p_range_min,p_range_max,p_step)
+
+        target_ext_ratio = 10
+
+        ext_ratio_error = []
+        study_details = []
+        rho_converge_perc = []
+        for p_max_in in p_range:
+            pred_ext_ratio = []
+            interm_rho = []
+            for i in range(num_it):
+                print(f'running: p={p_max_in}, run {i}')
+                top_opt_current = pixel_optim_nn.top_opt_funct(trained_model_folder,
+                                                        target_db = target_ext_ratio,
+                                                        num_epochs = num_epochs,
+                                                        p_max = p_max_in,
+                                                        p_step = (p_max_in-1)/num_epochs,
+                                                        print_details = False)
+                er = top_opt_current.predicted_perf.labels.detach().tolist()[0][0]
+                rho = top_opt_current.top_net.rho.detach().reshape(-1)
+                not_converged = len(rho[(rho > 0.1) & (rho < 0.9)])/len(rho)
+                interm_rho.append(not_converged)
+                pred_ext_ratio.append(er)
+                print('-----')
+            avg_ext_ratio = np.array(pred_ext_ratio).mean()
+            std_ext_ratio = np.array(pred_ext_ratio).std()
+            ext_ratio_error.append(abs(avg_ext_ratio-target_ext_ratio))
+            rho_converge_perc.append(np.array(interm_rho).mean())
+            study_details.append({'p_range':(p_range_min,p_range_max),
+                                  'pred_ext_ratio_stdev':std_ext_ratio,
+                                  'num_iterations':num_it,
+                                  'target_ext_ratio':target_ext_ratio,
+                                  'ext_ratio_list':pred_ext_ratio,
+                                  'not_converged':interm_rho})
+        df = pd.DataFrame({'p_max':p_range,
+                           'abs_ext_ratio_error':ext_ratio_error,
+                           'rho_converge_perc':rho_converge_perc,
+                           'study_details':study_details,
+                           })
+
+    fig,ax = plt.subplots()
+    ax.plot(df['p_max'], df['abs_ext_ratio_error'])
+    ax.set_xlabel("maximum p setting")
+    ax.set_ylabel("abs(Predicted - Target) Ext. Ratio")
+    fig.show()
+    if save_results == True:
+        fig.savefig('/home/jaspers2/Desktop/p_study.png')    
+        df.to_csv('/home/jaspers2/Desktop/p_study.csv',index=False)
+
+
+
+    return df
+
+def adam_learning_rate_study():
+    data_dir_in = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
+    #learning_rate_list = np.arange(1e-3,3e-3,1e-2)
+    n_list = np.arange(2.,6.,1.)
+    learning_rate_list, out = [], []
+    for n in n_list:
+        learning_rate_in = 10**(-n)
+        current = pixel_nn.main(data_dir = data_dir_in,
+                      learning_rate = learning_rate_in,
+                      save_out=False)
+        perc_db_error = (current.error.mean(axis=0)[0])*100
+        out.append(perc_db_error)
+        learning_rate_list.append(learning_rate_in)
+    
+    fig,ax = plt.subplots()
+    ax.semilogx(learning_rate_list,out)
+    ax.set_xlabel("learning_rate")
+    ax.set_ylabel("perc Ext. Ratio error")
+    fig.show()
+    return out, learning_rate_list
 
 
 def load_nn_data(data_folder = ''):
@@ -124,7 +211,7 @@ def load_comsol_results(df_nn, folder = ''):
 
 
 def plot_extRatio_vs_dT(df, filtering = False,
-             save_fig = False):
+                        save_fig = False):
     #create the ext_ratio vs dT plot, with pareto front
     file_path = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
     df_comsol = pd.read_pickle(file_path+"/df_all.pkl")
@@ -142,10 +229,12 @@ def plot_extRatio_vs_dT(df, filtering = False,
 
     fig,ax = plt.subplots()
     #plt.figure()
-    ax.scatter(df_comsol["ext_ratio"],
-                df_comsol["dT"],
-                label='Training',
-                s=5)
+
+    if 'ext_ratio' in df_opt.columns:
+        ax.scatter(df_comsol["ext_ratio"],
+                    df_comsol["dT"],
+                    label='Training',
+                    s=5)
     
     if "ext_ratio" in df_opt.columns:
         ax.scatter(df_opt["ext_ratio"],
@@ -198,7 +287,7 @@ def isolate_best_comsol(df, n_best_pts, db_range = []):
         db_target_max = db_range_array[k+1]
         df_filtered = (df.loc[(df['ext_ratio'] > db_target_min) & (df['ext_ratio'] < db_target_max)])
         df_best = df_filtered[df_filtered['dT'] == df_filtered['dT'].max()]
-        if len(df_out) == 0:
+        if len(df) == 0:
             raise Exception('distance b/w target DBs is too small to find a datapoint')
         df_pareto.append(df_best.to_dict(orient='records')[0])
 
@@ -264,7 +353,7 @@ def save_pdf(df, folder, filtered = False):
             axs.imshow(image)
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
-            axs.set_title(f"{p}\ndT (Pred (NN), FEM)= {current.dT:.1f}, {current.pred_dT:.1f}\ndB (Target, Pred (NN), FEM)  = {current.target_dB:.1f}, {current.pred_dB:.1f}, {current.ext_ratio:.1f}", fontsize=8)
+            axs.set_title(f"{p}\ndT (Pred (NN), FEM)= {current.pred_dT:.1f}, {current.dT:.1f}\ndB (Target, Pred (NN), FEM)  = {current.target_dB:.1f}, {current.pred_dB:.1f}, {current.ext_ratio:.1f}", fontsize=8)
             pdf.savefig()
             plt.close(fig)
 
@@ -315,6 +404,7 @@ def add_error(df):
     ax.plot(df['target_dB'],df['nn_comsol_error'],label='COMSOL')
     ax.set_xlabel('Target Ext. Ratio [dB]')
     ax.set_ylabel('Absolute Error, Predicted Ext. Ratio [dB]')
+    ax.set_title(f'FEM Mean Error, Stdev: {df.nn_comsol_error.mean():.3f}, {df.nn_comsol_error.std():.3f}')
     fig.legend()
     plt.show()
 
@@ -328,26 +418,67 @@ def add_error(df):
 
     return df
 
-def main():
-    #base_folder = '/home/jaspers2/Documents/pixel_optimization/dB_study/230225-1625'
-    base_folder = '/home/jaspers2/Documents/pixel_optimization/dB_study/230308-0707'
+def db_study_no_comsol(save = False):
+    df = load_nn_data(base_folder)
+    #df = add_error(df)
+    if save == True:
+        save_pdf(df, base_folder)
+    #db_ranges = [0,2,4,6,8,10,12,15,16,17]
+    model = pixel_optim_nn.load_perfnet(trained_model_folder)
+    df = add_filtered_image_perf(df, model)
+    plot_extRatio_vs_dT(df)
+    #df_pareto = isolate_best_comsol(df, 10)
+
+    return df, model
+
+def db_study_load_and_plot(base_folder, save = False):    
     df = load_nn_data(base_folder)
     df = load_comsol_results(df, base_folder + '/results')
     df = add_error(df)
-    #plotting(df, save_fig = False)
-    save_pdf(df, base_folder)
+    if save == True:
+        save_pdf(df, base_folder)
+        save_pdf(df, base_folder, filtered = True)
+    #db_ranges = [0,4,6,8,10,12,14,18]
+    db_ranges = [0,2,4,6,8,10,12,14,17.5,20] #for paper
+    plot_best_comsol_designs(df, db_ranges, filtering = True, save_fig = save)
+    model = pixel_optim_nn.load_perfnet(trained_model_folder)
+    df = add_filtered_image_perf(df, model)
+    df_pareto = isolate_best_comsol(df, 10)
+    plot_extRatio_vs_dT(df, save_fig = save)
 
-    db_ranges = [0,2,4,6,8,10,12,15,16,17]
-    plot_best_comsol_designs(df, db_ranges, filtering = True, save_fig = False)
+    return df, df_pareto, model
 
-    model_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
-    model = pixel_optim_nn.load_perfnet(model_folder)
-    return df, model
+def generate_for_manuscript(save = True):
+    base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230308-0707'
+    df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
+    return df, df_pareto, model
 
 if __name__ == '__main__':
-    df_out, perfnet = main()
-    df_out = add_filtered_image_perf(df_out, perfnet)
-    df_pareto = isolate_best_comsol(df_out, 10)
+    trained_model_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
 
+    # original setting, p = 2, num_epochs = 2000
+    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 2.0)
+    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230308-0707'
+    # df, df_pareto, model = db_study_load_and_plot()
 
+    # studying w/ p_max = 3.5, num_epochs = 2000
+    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 3.5)
+    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230324-1024'
+    # df, df_pareto, model = db_study_load_and_plot()
+
+    # studying w/ p_max = 1, num_epochs = 3000
+    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 1)
+    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230328-0656'
+    # df, df_pareto, model = db_study_load_and_plot()
     
+    #base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230225-1625'
+    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230308-0707'
+    #base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230322-0847'
+    # df, df_pareto, model = db_study_load_and_plot()
+
+    #base_folder = '/home/jaspers2/Desktop/db_study_230322'
+    #df, df_pareto, model = db_study_no_comsol()
+    
+    #out, learning_rate_list = adam_learning_rate_study()
+
+    #simp_p_study(save_results = True)

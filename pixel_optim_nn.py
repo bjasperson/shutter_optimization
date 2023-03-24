@@ -277,7 +277,7 @@ class TopOpt():
         self.plot_images(images, 'pretrained image')
 
     
-    def optimize(self, alpha_0, delta_alpha, alpha_max, max_epochs, p_init, delta_p, p_max):
+    def optimize(self, alpha_0, delta_alpha, alpha_max, max_epochs, p_init, delta_p, p_max, output = True):
         """perform optimization/training of top_op
 
         """
@@ -297,8 +297,9 @@ class TopOpt():
             
             images = self.top_net(self.input_xy, p_set, symmetric=self.symmetric)  # tensor [N_batch,2]
             images = images[None]  #add axis
-            if i == 0:
-                self.plot_images(images, 'initial image')
+            if output == True:
+                if i == 0:
+                    self.plot_images(images, 'initial image')
             pred_label = self.perfnn(images)
             predicted_perf.label_update(pred_label, 'normalized')
             
@@ -326,18 +327,20 @@ class TopOpt():
             thicknesses = np.array(self.top_net.weightx.tolist())
             thicknesses_scaled = self.rescale_thk(thicknesses)
 
-            if i % 100 == 0 or i == max_epochs-1:
-                print('---------------------')
-                print('epoch: ', i)
-                print('objective loss: ', objective.tolist())
-                print('loss = ', loss.tolist())
-                print('Thicknesses = ', thicknesses_scaled)
+            if output == True:
+                if i % 100 == 0 or i == max_epochs-1:
+                    print('---------------------')
+                    print('epoch: ', i)
+                    print('objective loss: ', objective.tolist())
+                    print('loss = ', loss.tolist())
+                    print('Thicknesses = ', thicknesses_scaled)
             ##########
 
             optimize_loss.append(loss.tolist())
 
-            if i == 1:
-                self.plot_images(images, 'optimized design after 1 epoch')
+            if output == True:
+                if i == 1:
+                    self.plot_images(images, 'optimized design after 1 epoch')
 
         # get/show final perforamcne
         self.top_net.eval()
@@ -349,7 +352,8 @@ class TopOpt():
         self.predicted_perf = predicted_perf
         self.images = images
         self.loss = optimize_loss
-        self.plot_images(images, 'final image')
+        if output == True:
+            self.plot_images(images, 'final image')
         self.error_terms = error_terms
         self.error_labels = error_labels_in
 
@@ -560,7 +564,10 @@ def top_opt_funct(perf_nn_folder,
                   target_choice = '1', 
                   target_db = 10, 
                   print_details=False,
-                  num_epochs = 3_000):
+                  num_epochs = 3_000,
+                  p_init = 1,
+                  p_max = 2,
+                  p_step = False):
     # set True to use GPU, False to use CPU
     device = use_gpu(False)  
         
@@ -590,9 +597,9 @@ def top_opt_funct(perf_nn_folder,
         #for dummy data, slightly different targets
         top_opt.set_targets(perfnn.label_names, (20, 10))    
     
-    
-    p_max = 2
-    top_opt.optimize(0,0,0,num_epochs,1,(p_max-1)/num_epochs,p_max)
+    if p_step == False:
+        p_step = (p_max-p_init)/num_epochs #will hit p_max at max_epochs
+    top_opt.optimize(0,0,0,num_epochs,p_init,p_step,p_max,output = print_details)
     top_opt.print_predicted_performance()
 
     if print_details == True:    

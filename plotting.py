@@ -20,7 +20,7 @@ dataloader = torch.load(trained_model_folder+'/test_dataloader.pkl')
 evaluate = pixel_nn.Evaluate(dataloader, perfnn)
 evaluate.get_preds('cpu')
 evaluate.pred_report()
-evaluate.plot_results(save='y')
+evaluate.plot_results(save='y') #Fig7
 
 ###############################################
 labels = ['Extinction Ratio', 'Temperature Rise']

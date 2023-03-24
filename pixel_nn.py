@@ -334,13 +334,15 @@ def main(
     kernel_size = [3,3,3,3],
     stride_size = [1,2,2,2],
     padding_size = [1,1,1,1],
-    n_batch_in = 2**8 #was 2**3
-    ):
+    n_batch_in = 2**8, #was 2**3
+    data_dir = "",
+    save_out = True):
     """
     """
     #######################
     # initial inputs
-    data_dir = input('paste data directory:  ')
+    if data_dir == "":
+        data_dir = input('paste data directory:  ')
     #network_name = input('network name:   ')
     network_name = 'Network10' #set to default
     network_to_use = getattr(perf_net, network_name)
@@ -415,10 +417,11 @@ def main(
     evaluate_train.plot_results()
 
     ###########################################
-    if input('save NN model + stats? y to save:    ') == 'y':
-        save_model(input_data, network, data_dir)
+    if save_out == True:
+        if input('save NN model + stats? y to save:    ') == 'y':
+            save_model(input_data, network, data_dir)
 
-    return
+    return evaluate
 
 
 if __name__ == '__main__':
