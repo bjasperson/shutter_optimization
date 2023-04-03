@@ -69,5 +69,5 @@ axis[1].grid()
 axis[1].set_xticks([0,1,2,3,4],['1','2','3','CB','Train'])
 
 fig.tight_layout()
-fig.savefig('/home/jaspers2/Desktop/FIG9_opt_design_data.eps',bbox_inches = "tight")
-fig.savefig('/home/jaspers2/Desktop/FIG9_opt_design_data.png',bbox_inches = "tight")
+fig.savefig('/home/jaspers2/Desktop/FIG8_opt_design_data.eps',bbox_inches = "tight")
+fig.savefig('/home/jaspers2/Desktop/FIG8_opt_design_data.png',bbox_inches = "tight")

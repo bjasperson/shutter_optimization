@@ -252,7 +252,7 @@ def plot_extRatio_vs_dT(df, filtering = False,
     ax.grid(True)
     plt.show()
     if save_fig == True:
-        fig.savefig('/home/jaspers2/Desktop/FIG11a_dB.eps',bbox_inches = "tight")
+        fig.savefig('/home/jaspers2/Desktop/FIG10a_dB.eps',bbox_inches = "tight")
 
 def plot_best_comsol(df,db_min, db_max, filtering=False):
 
@@ -329,7 +329,7 @@ def plot_best_comsol_designs(df, db_ranges, filtering = False, save_fig = False)
     fig.show()
 
     if save_fig == True:
-        fig.savefig('/home/jaspers2/Desktop/FIG11b_best.eps',bbox_inches = "tight")
+        fig.savefig('/home/jaspers2/Desktop/FIG10b_best.eps',bbox_inches = "tight")
 
     return 
 

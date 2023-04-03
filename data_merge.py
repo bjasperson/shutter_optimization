@@ -159,7 +159,7 @@ def analyze_results(file_path,save, save_loc=""):
     
     if save == 'y':
         #plt.tight_layout()
-        plt.savefig(save_loc + "/FIG6_perc_coverage.eps")
+        plt.savefig(save_loc + "/FIG5_perc_coverage.eps")
     plt.show()
     
     ###########################

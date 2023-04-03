@@ -164,7 +164,7 @@ class Evaluate():
 
         if save == 'y':
             save_loc = input("plot save location: ")
-            fig.savefig(save_loc + '/FIG7_pred_vs_actual_dT.eps')
+            fig.savefig(save_loc + '/FIG6_pred_vs_actual_dT.eps')
         
         for i in range(len(self.network.label_names)):
             plt.figure()
