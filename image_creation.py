@@ -81,6 +81,7 @@ class Image():
         
         #param file for comsol
         self.save_comsol_inputs(path, timestamp)
+        self.save_fab_inputs(path, timestamp)
         
         #simulated results
         if feature_image.shape[2] == 20:
@@ -113,6 +114,17 @@ class Image():
             
             with open(os.path.join(path,'bits/'+timestamp+'-'+str(j)+'_bits.txt'),'w') as f:
                 f.write(bits_file)
+
+    def save_fab_inputs(self, path, timestamp):
+        N,C,H,W = self.images.shape
+
+        os.mkdir(os.path.join(path,'fab'))
+        for k in range(N):
+            image_txt = []
+            for i in range(H):
+                for j in range(W):
+                    image_txt.append([i,j,self.images[k,0,i,j]])
+            np.savetxt(path+'/fab/'+timestamp+'-'+str(k)+'_fab.csv',image_txt,delimiter=",")
        
 
 def random_gen_2(N_pts,N_pixels_width):
