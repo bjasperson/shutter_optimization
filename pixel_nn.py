@@ -161,6 +161,7 @@ class Evaluate():
                 title = "Temperature Rise"
             ax[i].set_title(title)
             ax[i].grid()
+        fig.show()
 
         if save == 'y':
             save_loc = input("plot save location: ")
@@ -171,6 +172,7 @@ class Evaluate():
             plt.hist(self.error[:,i]*100)
             plt.xlabel("Percent error")
             plt.title(self.network.label_names[i])
+            plt.show()
 
 
 #########################################################
