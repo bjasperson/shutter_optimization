@@ -124,7 +124,7 @@ def analyze_results(file_path,save, save_loc=""):
     for i,image in enumerate(df["image"]):
         total = sum(image[0].reshape(-1)>0)
         coverage.append(total)
-    df["coverage"] = coverage/max(coverage)
+    df["coverage"] = 100*(coverage/max(coverage))
 
     ###########################
     plt.figure(figsize=(12,4))
