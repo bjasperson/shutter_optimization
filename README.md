@@ -7,6 +7,7 @@ Shutter optimization code and datasets.
 - perf_net.py: normalize images and results, rescale results, and perf_net architecture.
 - pixel_optim_nn.py: train/testing for top_opt.
 - plotting.py: plotting functionality for paper.
+- studies.py: creation of design front (Pareto figure), along with hyperparameter optimization
 
 # Training Data
 - combined_results_original: original dataset used for optimization; temperature in K.
