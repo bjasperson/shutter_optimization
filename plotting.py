@@ -8,11 +8,12 @@ import matplotlib.pyplot as plt
 import pixel_optim_nn
 import pixel_nn
 import torch
+import os
 
 plt.rcParams["figure.dpi"] = 500
 
-results_folder = input("combined_results folder: ")
-trained_model_folder = input("trained model folder: ")
+results_folder = "./data/combined_results_dT"
+trained_model_folder = results_folder + "/trained_model_221004-1433"
 perfnn = pixel_optim_nn.load_perfnet(trained_model_folder)
 
 dataloader = torch.load(trained_model_folder+'/test_dataloader.pkl')
@@ -20,7 +21,7 @@ dataloader = torch.load(trained_model_folder+'/test_dataloader.pkl')
 evaluate = pixel_nn.Evaluate(dataloader, perfnn)
 evaluate.get_preds('cpu')
 evaluate.pred_report()
-evaluate.plot_results(save='y') #Fig7
+evaluate.plot_results(save='y') 
 
 ###############################################
 labels = ['Extinction Ratio', 'Temperature Rise']
@@ -69,5 +70,5 @@ axis[1].grid()
 axis[1].set_xticks([0,1,2,3,4],['1','2','3','CB','Train'])
 
 fig.tight_layout()
-fig.savefig('/home/jaspers2/Desktop/FIG8_opt_design_data.eps',bbox_inches = "tight")
-fig.savefig('/home/jaspers2/Desktop/FIG8_opt_design_data.png',bbox_inches = "tight")
+fig.savefig(os.path.expanduser("~/Desktop/FIG8_opt_design_data.eps"),bbox_inches = "tight")
+fig.savefig(os.path.expanduser("~/Desktop/FIG8_opt_design_data.png"),bbox_inches = "tight")

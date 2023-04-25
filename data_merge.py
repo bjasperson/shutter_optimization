@@ -13,7 +13,7 @@ def main():
     #process input data, merge and create combined results
     if input("process input data (y/n)? ")=="y":
         readme = ""
-        base_folder = input("prod[x]_data folder:  ")
+        base_folder = "./data" #alt: input("prod[x]_data folder:  ")
         image_folder = base_folder + "/images" 
         results_folder = base_folder + "/results"
         

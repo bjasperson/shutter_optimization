@@ -12,7 +12,7 @@ import torch
 
 def generate(save_folder, dB_range = (2,15), n_dB = 100, p_max_in = 2):
     dB_values = np.linspace(dB_range[0],dB_range[1],n_dB).tolist()
-    data_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
+    data_folder = './data/combined_results_dT/trained_model_221004-1433'
     images, images_tf, target_dB_list, pred_dB_list, pred_dT_list, path_list,bits_list = [],[],[],[],[],[],[]
     unique_id_list = []
 
@@ -111,15 +111,15 @@ def simp_p_study(df = '', save_results = False):
     ax.set_ylabel("abs(Predicted - Target) Ext. Ratio")
     fig.show()
     if save_results == True:
-        fig.savefig('/home/jaspers2/Desktop/p_study.png')    
-        df.to_csv('/home/jaspers2/Desktop/p_study.csv',index=False)
+        fig.savefig(os.path.expanduser("~/Desktop/p_study.png"))    
+        df.to_csv(os.path.expanduser("~/Desktop/p_study.csv"),index=False)
 
 
 
     return df
 
 def adam_learning_rate_study():
-    data_dir_in = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
+    data_dir_in = "./data/combined_results_dT"
     #learning_rate_list = np.arange(1e-3,3e-3,1e-2)
     n_list = np.arange(2.,6.,1.)
     learning_rate_list, out = [], []
@@ -177,43 +177,10 @@ def load_comsol_results(df_nn, folder = ''):
     return combined
 
 
-# def plot_design_grid(df, n_plt_w = 3, n_plt_h = 3, filtering = False,
-#              save_fig = False):
-#     #this is plotting a rep design in middle of range, 
-#     #NOT the best one. Likely can be removed
-#     #subplots of select designs
-#     i=0
-#     j=0
-#     fig,axs = plt.subplots(n_plt_h,n_plt_w)    
-#     n_plt = n_plt_w*n_plt_h
-
-#     n_df = df.shape[0]
-#     data_pt = [round(i*(n_df/(n_plt-1)))for i in range(n_plt-1)]
-#     data_pt.append(n_df-1)
-#     for p in data_pt:
-#         current = df.iloc[p]
-#         image = current.images
-#         image = np.concatenate((image,np.flip(image,0)),axis=0)
-#         image = np.concatenate((image,np.flip(image,1)),axis=1)
-#         if filtering == True:
-#             image[image<0.5] = 0
-#             image[image>=0.5] = 1
-#         axs[i,j].imshow(image)
-#         axs[i,j].get_xaxis().set_visible(False)
-#         axs[i,j].get_yaxis().set_visible(False)
-#         axs[i,j].set_title(f"{p}: dT={current.pred_dT:.1f}, dB={current.pred_dB:.1f} ({current.target_dB:.1f})", fontsize=8)
-
-#         if j<(n_plt_w-1):
-#             j+=1
-#         else:
-#             i+=1
-#             j=0
-
-
 def plot_extRatio_vs_dT(df, filtering = False,
                         save_fig = False):
     #create the ext_ratio vs dT plot, with pareto front
-    file_path = "/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT"
+    file_path = "./data/combined_results_dT"
     df_comsol = pd.read_pickle(file_path+"/df_all.pkl")
     df_comsol["dT"] = df_comsol["T_VO2_avg"] - 273.15
     
@@ -252,7 +219,7 @@ def plot_extRatio_vs_dT(df, filtering = False,
     ax.grid(True)
     plt.show()
     if save_fig == True:
-        fig.savefig('/home/jaspers2/Desktop/FIG10a_dB.eps',bbox_inches = "tight")
+        fig.savefig(os.path.expanduser("~/Desktop/FIG10a_dB.eps"),bbox_inches = "tight")
 
 def plot_best_comsol(df,db_min, db_max, filtering=False):
 
@@ -329,7 +296,7 @@ def plot_best_comsol_designs(df, db_ranges, filtering = False, save_fig = False)
     fig.show()
 
     if save_fig == True:
-        fig.savefig('/home/jaspers2/Desktop/FIG10b_best.eps',bbox_inches = "tight")
+        fig.savefig(os.path.expanduser("~/Desktop/FIG10b_best.eps"),bbox_inches = "tight")
 
     return 
 
@@ -418,7 +385,7 @@ def add_error(df):
 
     return df
 
-def db_study_no_comsol(save = False):
+def db_study_no_comsol(base_folder, save = False):
     df = load_nn_data(base_folder)
     #df = add_error(df)
     if save == True:
@@ -449,36 +416,9 @@ def db_study_load_and_plot(base_folder, save = False):
     return df, df_pareto, model
 
 def generate_for_manuscript(save = True):
-    base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230308-0707'
+    base_folder = os.path.expanduser("~/Documents/pixel_optimization/studies/db_ranges/230308-0707")
     df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
     return df, df_pareto, model
 
 if __name__ == '__main__':
-    trained_model_folder = '/home/jaspers2/Documents/pixel_optimization/prod3_data/combined_results_221004-1015_withdT/trained_model_221004-1433'
-
-    # original setting, p = 2, num_epochs = 2000
-    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 2.0)
-    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230308-0707'
-    # df, df_pareto, model = db_study_load_and_plot()
-
-    # studying w/ p_max = 3.5, num_epochs = 2000
-    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 3.5)
-    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230324-1024'
-    # df, df_pareto, model = db_study_load_and_plot()
-
-    # studying w/ p_max = 1, num_epochs = 3000
-    # generate('/home/jaspers2/Desktop/db_study', p_max_in = 1)
-    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/db_ranges/230328-0656'
-    # df, df_pareto, model = db_study_load_and_plot()
-    
-    #base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230225-1625'
-    # base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230308-0707'
-    #base_folder = '/home/jaspers2/Documents/pixel_optimization/studies/230322-0847'
-    # df, df_pareto, model = db_study_load_and_plot()
-
-    #base_folder = '/home/jaspers2/Desktop/db_study_230322'
-    #df, df_pareto, model = db_study_no_comsol()
-    
-    #out, learning_rate_list = adam_learning_rate_study()
-
-    #simp_p_study(save_results = True)
+    trained_model_folder = "./data/combined_results_dT/trained_model_221004-1433"
