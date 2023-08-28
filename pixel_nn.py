@@ -176,6 +176,81 @@ class Evaluate():
             plt.title(self.network.label_names[i])
             plt.show()
 
+    def plot_error(self, save = 'y'):
+
+        plt.rcParams['figure.dpi'] = 150
+        plt.rcParams['font.size'] = 14 
+
+        loc_er = self.network.label_names.index('ext_ratio')
+        loc_dT = self.network.label_names.index('dT')
+        ext_ratio = self.actual_values[:,loc_er]
+        temp = self.actual_values[:,loc_dT]
+        
+        er_error = self.error[:,loc_er]
+        dT_error = self.error[:,loc_dT]
+
+        fig, axs = plt.subplots(1,2,figsize = (10,5))
+        fig.tight_layout(h_pad=6)
+        axs[0].scatter(ext_ratio, er_error, s=5)
+        axs[1].scatter(ext_ratio, dT_error, s=5)
+        fig.supxlabel('Actual Ext. Ratio')
+        fig.supylabel('Error')
+        axs[0].set_title('Ext. Ratio')
+        axs[1].set_title('dT')
+
+        
+        if save == 'y':
+            fig.savefig(self.plot_save_loc + '/error_vs_extRatio.eps')
+        else:
+            plt.show()
+
+    def add_perc_coverage(self, device):
+        perc_cov_all = []
+        for batch in self.eval_dataloader:
+            images, labels = batch
+            images, labels = images.to(device), labels.to(device)
+            _,_,h,w = images.shape
+            count = images[:,0,:,:].sum(axis=(1,2))
+            perc_cov_all.extend((count/(h*w)).tolist())
+        
+        self.perc_cov = perc_cov_all
+
+        return
+
+
+    def plot_data_distribution(self, save = 'y'):
+        loc_er = self.network.label_names.index('ext_ratio')
+        loc_dT = self.network.label_names.index('dT')
+        ext_ratio = self.actual_values[:,loc_er]
+        temp = self.actual_values[:,loc_dT]
+        perc_cov = self.perc_cov
+
+
+        fig, axs = plt.subplots(1,3,figsize = (10,5),sharey=True)
+        #fig.tight_layout(h_pad=6)
+        axs[0].hist(ext_ratio)
+        axs[1].hist(temp)
+        axs[2].hist(perc_cov)
+        axs[0].set_title('Ext. Ratio')
+        axs[1].set_title('dT')
+        axs[2].set_title('Percent Coverage')
+        axs[0].set_xlabel('Ext. Ratio')
+        axs[1].set_xlabel('dT')
+        axs[2].set_xlabel('Percent Coverage')
+        fig.supylabel('Count')
+
+
+        if save == 'y':
+            fig.savefig(self.plot_save_loc + '/data_hist.eps')
+        else:
+            plt.show()
+
+
+
+
+
+
+
 
 #########################################################
 def create_dataloader(image_stats,label_stats,images,labels,n_batch):
