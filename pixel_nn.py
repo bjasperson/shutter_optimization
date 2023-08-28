@@ -104,11 +104,12 @@ class InputData():
 class Evaluate():
     """
     """
-    def __init__(self, eval_dataloader, network):
+    def __init__(self, eval_dataloader, network, plot_save_loc=""):
         """
         """
         self.eval_dataloader = eval_dataloader
         self.network = network
+        self.plot_save_loc = plot_save_loc
 
     def get_preds(self, device):
 
@@ -164,8 +165,9 @@ class Evaluate():
         fig.show()
 
         if save == 'y':
-            save_loc = input("plot save location: ")
-            fig.savefig(save_loc + '/FIG6_pred_vs_actual_dT.eps')
+            if self.plot_save_loc == "":
+                self.plot_save_loc = input("plot save location: ")
+            fig.savefig(self.plot_save_loc + '/FIG6_pred_vs_actual_dT.eps')
         
         for i in range(len(self.network.label_names)):
             plt.figure()
@@ -337,7 +339,7 @@ def main(
     stride_size = [1,2,2,2],
     padding_size = [1,1,1,1],
     n_batch_in = 2**8, #was 2**3
-    data_dir = "",
+    data_dir = "./data/combined_results_dT/",
     save_out = True):
     """
     """

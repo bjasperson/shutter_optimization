@@ -18,7 +18,7 @@ perfnn = pixel_optim_nn.load_perfnet(trained_model_folder)
 
 dataloader = torch.load(trained_model_folder+'/test_dataloader.pkl')
 
-evaluate = pixel_nn.Evaluate(dataloader, perfnn)
+evaluate = pixel_nn.Evaluate(dataloader, perfnn, "./figs")
 evaluate.get_preds('cpu')
 evaluate.pred_report()
 evaluate.plot_results(save='y') 
@@ -70,5 +70,5 @@ axis[1].grid()
 axis[1].set_xticks([0,1,2,3,4],['1','2','3','CB','Train'])
 
 fig.tight_layout()
-fig.savefig(os.path.expanduser("~/Desktop/FIG8_opt_design_data.eps"),bbox_inches = "tight")
-fig.savefig(os.path.expanduser("~/Desktop/FIG8_opt_design_data.png"),bbox_inches = "tight")
+fig.savefig(os.path.expanduser("./figs/FIG8_opt_design_data.eps"),bbox_inches = "tight")
+fig.savefig(os.path.expanduser("./figs/FIG8_opt_design_data.png"),bbox_inches = "tight")
