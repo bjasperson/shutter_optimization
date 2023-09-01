@@ -176,7 +176,7 @@ class Evaluate():
             plt.title(self.network.label_names[i])
             plt.show()
 
-    def plot_error(self, save = 'y'):
+    def plot_residual(self, save = 'y'):
 
         plt.rcParams['figure.dpi'] = 150
         plt.rcParams['font.size'] = 14 
@@ -186,15 +186,15 @@ class Evaluate():
         ext_ratio = self.actual_values[:,loc_er]
         temp = self.actual_values[:,loc_dT]
         
-        er_error = self.error[:,loc_er]
-        dT_error = self.error[:,loc_dT]
+        er_residual = abs(self.diff[:,loc_er])
+        dT_residual = abs(self.diff[:,loc_dT])
 
         fig, axs = plt.subplots(1,2,figsize = (10,5))
-        fig.tight_layout(h_pad=6)
-        axs[0].scatter(ext_ratio, er_error, s=5)
-        axs[1].scatter(ext_ratio, dT_error, s=5)
+        #fig.tight_layout(h_pad=6)
+        axs[0].scatter(ext_ratio, er_residual, s=5)
+        axs[1].scatter(ext_ratio, dT_residual, s=5)
         fig.supxlabel('Actual Ext. Ratio')
-        fig.supylabel('Error')
+        fig.supylabel('Absolute Residual Error')
         axs[0].set_title('Ext. Ratio')
         axs[1].set_title('dT')
 

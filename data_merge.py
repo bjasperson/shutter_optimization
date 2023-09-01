@@ -36,10 +36,7 @@ def main():
         if check == False:
             combined_results_folder = input("combined results folder: ")
         save = input("save results (y/n)?   ")
-        save_loc = ""
-        if save == 'y':
-            save_loc = input("save location: ")
-        analyze_results(combined_results_folder, save, save_loc)  
+        analyze_results(combined_results_folder, save)  
         
 
 def import_images(folder):
@@ -74,7 +71,7 @@ def import_results(folder):
     
     return df
 
-def analyze_results(file_path,save, save_loc=""):
+def analyze_results(file_path,save):
     """perform any analysis on results as needed
     """
     df = pd.read_pickle(file_path+"/df_all.pkl")
@@ -96,7 +93,7 @@ def analyze_results(file_path,save, save_loc=""):
     plt.grid()
     if save == 'y':
         plt.tight_layout()
-        plt.savefig(save_loc + "/training_data.eps")
+        plt.savefig("./figs/training_data.eps")
     plt.show()
     
     ###########################
@@ -113,7 +110,7 @@ def analyze_results(file_path,save, save_loc=""):
     plt.grid()
     if save == 'y':
         plt.tight_layout()
-        plt.savefig(save_loc + "/training_data_w_opt_points.eps")
+        plt.savefig("./figs/training_data_w_opt_points.eps")
     plt.show()
 
     ###########################
@@ -133,7 +130,7 @@ def analyze_results(file_path,save, save_loc=""):
                 df["ext_ratio"],
                 s=5)
     plt.ylabel("Extinction Ratio - dB")
-    plt.xlabel("Percent Coverage\n(a)")
+    plt.xlabel("Percent Coverage")
     plt.grid(True)
 
     plt.subplot(132)
@@ -141,7 +138,7 @@ def analyze_results(file_path,save, save_loc=""):
                 df["dT"],
                 s=5)
     plt.ylabel("Temperature Rise - K")
-    plt.xlabel("Percent Coverage\n(b)")
+    plt.xlabel("Percent Coverage")
     plt.grid(True)
     
     plt.subplot(133)
@@ -152,14 +149,14 @@ def analyze_results(file_path,save, save_loc=""):
     #             df_opt["dT"],
     #             marker='x')
     #plt.title("Training Data")
-    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$"+"\n(c)")
+    plt.xlabel(r"Extinction Ratio [dB] = $10\log_{10}\frac{Tr_{ins}}{Tr_{met}}$")
     plt.ylabel("Temperature Rise - K")
     plt.grid()
     plt.tight_layout()
     
     if save == 'y':
         #plt.tight_layout()
-        plt.savefig(save_loc + "/FIG5_perc_coverage.eps")
+        plt.savefig("./figs/FIG5_perc_coverage.eps")
     plt.show()
     
     ###########################

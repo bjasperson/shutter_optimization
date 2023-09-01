@@ -6,6 +6,7 @@
 
 import matplotlib.pyplot as plt
 import pixel_optim_nn
+import data_merge
 import pixel_nn
 import torch
 import os
@@ -19,12 +20,15 @@ perfnn = pixel_optim_nn.load_perfnet(trained_model_folder)
 dataloader_train = torch.load(trained_model_folder+'/train_dataloader.pkl')
 dataloader_test = torch.load(trained_model_folder+'/test_dataloader.pkl')
 
+data_merge.analyze_results(results_folder, 'y')  
+
+
 # test evaluations
 evaluate = pixel_nn.Evaluate(dataloader_test, perfnn, "./figs")
 evaluate.get_preds('cpu')
 evaluate.pred_report()
 evaluate.plot_results(save='y') 
-evaluate.plot_error()
+evaluate.plot_residual()
 
 evaluate_train = pixel_nn.Evaluate(dataloader_train, perfnn, "./figs")
 evaluate_train.get_preds('cpu')
