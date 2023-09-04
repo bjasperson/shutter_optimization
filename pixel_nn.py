@@ -200,7 +200,7 @@ class Evaluate():
 
         
         if save == 'y':
-            fig.savefig(self.plot_save_loc + '/error_vs_extRatio.eps')
+            fig.savefig(self.plot_save_loc + '/FIG6b_error_vs_extRatio.eps')
         else:
             plt.show()
 
@@ -226,7 +226,7 @@ class Evaluate():
         perc_cov = self.perc_cov
 
 
-        fig, axs = plt.subplots(1,3,figsize = (10,5),sharey=True)
+        fig, axs = plt.subplots(1,3,figsize = (12,5),sharey=True)
         #fig.tight_layout(h_pad=6)
         axs[0].hist(ext_ratio)
         axs[1].hist(temp)
@@ -241,16 +241,9 @@ class Evaluate():
 
 
         if save == 'y':
-            fig.savefig(self.plot_save_loc + '/data_hist.eps')
+            fig.savefig(self.plot_save_loc + '/FIG5b_data_hist.eps')
         else:
             plt.show()
-
-
-
-
-
-
-
 
 #########################################################
 def create_dataloader(image_stats,label_stats,images,labels,n_batch):
