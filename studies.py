@@ -111,8 +111,8 @@ def simp_p_study(df = '', save_results = False):
     ax.set_ylabel("abs(Predicted - Target) Ext. Ratio")
     fig.show()
     if save_results == True:
-        fig.savefig(os.path.expanduser("~/Desktop/p_study.png"))    
-        df.to_csv(os.path.expanduser("~/Desktop/p_study.csv"),index=False)
+        fig.savefig(os.path.expanduser("./studies/p_study/p_study.png"))
+        df.to_csv(os.path.expanduser("./studies/p_study/p_study.csv"),index=False)
 
 
 
@@ -219,7 +219,7 @@ def plot_extRatio_vs_dT(df, filtering = False,
     ax.grid(True)
     plt.show()
     if save_fig == True:
-        fig.savefig(os.path.expanduser("~/Desktop/FIG10a_dB.eps"),bbox_inches = "tight")
+        fig.savefig(os.path.expanduser("./figs/FIG10a_dB.eps"),bbox_inches = "tight")
 
 def plot_best_comsol(df,db_min, db_max, filtering=False):
 
@@ -296,7 +296,7 @@ def plot_best_comsol_designs(df, db_ranges, filtering = False, save_fig = False)
     fig.show()
 
     if save_fig == True:
-        fig.savefig(os.path.expanduser("~/Desktop/FIG10b_best.eps"),bbox_inches = "tight")
+        fig.savefig(os.path.expanduser("./figs/FIG10b_best.eps"),bbox_inches = "tight")
 
     return 
 
@@ -416,9 +416,10 @@ def db_study_load_and_plot(base_folder, save = False):
     return df, df_pareto, model
 
 def generate_for_manuscript(save = True):
-    base_folder = os.path.expanduser("~/Documents/pixel_optimization/studies/db_ranges/230308-0707")
+    base_folder = os.path.expanduser("./studies/db_ranges/manuscript")
     df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
     return df, df_pareto, model
 
 if __name__ == '__main__':
     trained_model_folder = "./data/combined_results_dT/trained_model_221004-1433"
+    generate_for_manuscript()
