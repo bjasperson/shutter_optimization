@@ -1,5 +1,9 @@
 # Shutter optimization code and datasets.
 
+## Setup
+- [Clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) the repo to your machine
+- Create a [conda environment](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file) using the attached environment.yml file 
+
 ## Python modules
 - image_creation.py: generates random image designs for data generation. Also can create checkerboard pattern and simulated results for full images.
 - data_merge.py: combine simulation results into readable format for neural network. Also can analyze/plot results. 
