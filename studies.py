@@ -111,8 +111,8 @@ def simp_p_study(df = '', save_results = False):
     ax.set_ylabel("abs(Predicted - Target) Ext. Ratio")
     fig.show()
     if save_results == True:
-        fig.savefig(os.path.expanduser("./studies/p_study/p_study.png"))
-        df.to_csv(os.path.expanduser("./studies/p_study/p_study.csv"),index=False)
+        fig.savefig(os.path.expanduser("./data/studies/p_study/p_study.png"))
+        df.to_csv(os.path.expanduser("./data/studies/p_study/p_study.csv"),index=False)
 
 
 
@@ -416,7 +416,7 @@ def db_study_load_and_plot(base_folder, save = False):
     return df, df_pareto, model
 
 def generate_for_manuscript(save = True):
-    base_folder = os.path.expanduser("./studies/db_ranges/manuscript")
+    base_folder = os.path.expanduser("./data/studies/db_ranges/manuscript")
     df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
     return df, df_pareto, model
 
