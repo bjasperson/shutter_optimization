@@ -427,14 +427,8 @@ def cv_perfnn_training(n_splits = 5):
         print(f"Fold {i}")
         print(f"Train: index={train_index}")
         print(f"Test: index={test_index}")
-
-        # make input_data using the index values provided
-        # create splits and save images/labels under input_data.images_train, ...
-        # don't forget to add reset weights at some point here...
-        # might not be needed, since I'm recreating each time    
             
-        output = pixel_nn.main(num_epochs = 30,
-                               save_out = False,
+        output = pixel_nn.main(save_out = False,
                                train_indices = train_index,
                                test_indices = test_index,
                                plot_out = False)
