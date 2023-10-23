@@ -42,10 +42,16 @@ class InputData():
         print('import done')
 
 
-    def create_datasets(self, test_perc, n_batch, image_norm_code=[], label_norm_code=[]):
+    def create_datasets(self, test_perc, n_batch, image_norm_code=[], label_norm_code=[], train_indices = False, test_indices = False):
         # split dataset into train and test
-        images_train, images_test, labels_train, labels_test = train_test_split(
-            self.orig_images, self.orig_labels, test_size=test_perc, shuffle=True)
+        if test_perc != False:
+            images_train, images_test, labels_train, labels_test = train_test_split(
+                self.orig_images, self.orig_labels, test_size=test_perc, shuffle=True)
+        else:
+            images_train = self.orig_images[train_indices]
+            images_test = self.orig_images[test_indices]
+            labels_train = self.orig_labels[train_indices]
+            labels_test = self.orig_labels[test_indices]
 
         # image stats, only use training images for stats
         self.image_stats = self.get_image_stats(images_train)  
@@ -408,7 +414,10 @@ def main(
     padding_size = [1,1,1,1],
     n_batch_in = 2**8, #was 2**3
     data_dir = "./data/combined_results_dT/",
-    save_out = True):
+    save_out = True,
+    train_indices = False,
+    test_indices = False,
+    plot_out = True):
     """
     """
     #######################
@@ -434,8 +443,10 @@ def main(
     input_data = InputData(data_dir)
     input_data.create_datasets(test_perc=0.2,
                                n_batch=n_batch_in,
-                               image_norm_code=1,
-                               label_norm_code=2)
+                               image_norm_code = 1,
+                               label_norm_code = 2,
+                               train_indices = train_indices,
+                               test_indices = test_indices)
 
     network = network_to_use(input_data, out_chnl, kernel_size, stride_size, padding_size).to(device)
     network.network_name = network_name
@@ -480,19 +491,23 @@ def main(
     evaluate = Evaluate(input_data.test_dataloader, network)
     evaluate.get_preds(device)
     evaluate.pred_report()
-    evaluate.plot_results()
+
 
     print('----Evaluate training data----')
     evaluate_train = Evaluate(input_data.train_dataloader, network)
     evaluate_train.get_preds(device)
     evaluate_train.pred_report()
-    evaluate_train.plot_results()
+
 
     ###########################################
     if save_out == True:
         if input('save NN model + stats? y to save:    ') == 'y':
             save_model(input_data, network, data_dir)
 
+    if plot_out == True:
+        evaluate.plot_results()
+        evaluate_train.plot_results()
+        
     return evaluate
 
 

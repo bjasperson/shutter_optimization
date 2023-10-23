@@ -9,6 +9,7 @@ import glob
 from image_creation import create_timestamp
 import os
 import torch
+from sklearn.model_selection import KFold
 
 def generate(save_folder, dB_range = (2,15), n_dB = 100, p_max_in = 2):
     dB_values = np.linspace(dB_range[0],dB_range[1],n_dB).tolist()
@@ -415,6 +416,34 @@ def db_study_load_and_plot(base_folder, save = False):
 
     return df, df_pareto, model
 
+
+def cv_perfnn_training(n_splits = 5):
+    data_dir = "./data/combined_results_dT/"
+
+    input_data = pixel_nn.InputData(data_dir)
+    kf = KFold(n_splits = n_splits)
+    output_list = []
+    for i, (train_index,test_index) in enumerate(kf.split(range(len(input_data.orig_labels)))):
+        print(f"Fold {i}")
+        print(f"Train: index={train_index}")
+        print(f"Test: index={test_index}")
+
+        # make input_data using the index values provided
+        # create splits and save images/labels under input_data.images_train, ...
+        # don't forget to add reset weights at some point here...
+        # might not be needed, since I'm recreating each time    
+            
+        output = pixel_nn.main(num_epochs = 30,
+                               save_out = False,
+                               train_indices = train_index,
+                               test_indices = test_index,
+                               plot_out = False)
+        output_list.append(output.error.mean(axis=0)*100)
+    df_output = pd.DataFrame(output_list,columns=output.network.label_names)
+    df_output.to_csv('./data/studies/cv/cv_study.csv')
+    return
+
+
 def generate_for_manuscript(save = True):
     base_folder = os.path.expanduser("./data/studies/db_ranges/manuscript")
     df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
@@ -422,4 +451,5 @@ def generate_for_manuscript(save = True):
 
 if __name__ == '__main__':
     trained_model_folder = "./data/combined_results_dT/trained_model_221004-1433"
-    generate_for_manuscript()
+    # generate_for_manuscript()
+    cv_perfnn_training()
