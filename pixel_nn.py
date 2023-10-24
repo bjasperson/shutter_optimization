@@ -224,33 +224,6 @@ class Evaluate():
         return
 
 
-    def plot_data_distribution(self, save = 'y'):
-        loc_er = self.network.label_names.index('ext_ratio')
-        loc_dT = self.network.label_names.index('dT')
-        ext_ratio = self.actual_values[:,loc_er]
-        temp = self.actual_values[:,loc_dT]
-        perc_cov = self.perc_cov
-
-
-        fig, axs = plt.subplots(1,3,figsize = (12,5),sharey=True)
-        #fig.tight_layout(h_pad=6)
-        axs[0].hist(ext_ratio)
-        axs[1].hist(temp)
-        axs[2].hist(perc_cov)
-        axs[0].set_title('Ext. Ratio')
-        axs[1].set_title('dT')
-        axs[2].set_title('Percent Coverage')
-        axs[0].set_xlabel('Ext. Ratio')
-        axs[1].set_xlabel('dT')
-        axs[2].set_xlabel('Percent Coverage')
-        fig.supylabel('Count')
-
-
-        if save == 'y':
-            fig.savefig(self.plot_save_loc + '/FIG5b_data_hist.eps')
-        else:
-            plt.show()
-
 #########################################################
 def create_dataloader(image_stats,label_stats,images,labels,n_batch):
     """Create dataloader from set of images and labels

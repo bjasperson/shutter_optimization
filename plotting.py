@@ -29,13 +29,46 @@ evaluate.get_preds('cpu')
 evaluate.pred_report()
 evaluate.plot_results(save='y') 
 evaluate.plot_residual()
+evaluate.add_perc_coverage('cpu')
 
 evaluate_train = pixel_nn.Evaluate(dataloader_train, perfnn, "./figs")
 evaluate_train.get_preds('cpu')
 evaluate_train.add_perc_coverage('cpu')
-evaluate_train.plot_data_distribution()
 
 ###############################################
+
+def plot_data_distribution(data, fig, axs):
+    loc_er = data.network.label_names.index('ext_ratio')
+    loc_dT = data.network.label_names.index('dT')
+    ext_ratio = data.actual_values[:,loc_er]
+    temp = data.actual_values[:,loc_dT]
+    perc_cov = data.perc_cov
+
+    #fig.tight_layout(h_pad=6)
+    axs[0].hist(ext_ratio)
+    axs[1].hist(temp)
+    axs[2].hist(perc_cov)
+    axs[0].set_xlabel('Ext. Ratio')
+    axs[1].set_xlabel('dT')
+    axs[2].set_xlabel('Percent Coverage')
+    fig.supylabel('Count')
+    return fig, axs
+
+
+def fig5b(train, test, save = 'y'):
+    fig, axs = plt.subplots(1,3,figsize = (12,5),sharey=True)
+    fig, axs  = plot_data_distribution(train, fig, axs)
+    fig, axs  = plot_data_distribution(test, fig, axs)
+    fig.legend(['train','test'], 
+               loc = 'upper right',
+               #bbox_to_anchor = (0.5,-0.05),
+               ncol = 2)
+    fig.tight_layout()
+    if save == 'y':
+        fig.savefig('./figs/FIG5b_data_hist.eps')
+    else:
+        plt.show()
+    return
 
 def fig8():
     sub = evaluate.predictions
@@ -87,6 +120,7 @@ def fig8():
 
 
 def main():
+    fig5b(evaluate_train, evaluate)
     fig8()
 
 if __name__ == "__main__":
