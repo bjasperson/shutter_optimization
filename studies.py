@@ -445,5 +445,4 @@ def generate_for_manuscript(save = True):
 
 if __name__ == '__main__':
     trained_model_folder = "./data/combined_results_dT/trained_model_221004-1433"
-    # generate_for_manuscript()
-    cv_perfnn_training()
+    generate_for_manuscript()
