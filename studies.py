@@ -438,6 +438,49 @@ def cv_perfnn_training(n_splits = 5):
     return
 
 
+def seed_study(target_db,
+               num_tests = 9,
+               save_fig = True,
+               filtering = True,
+               data_folder = "data/combined_results_dT/trained_model_221004-1433"):
+    images = []
+
+    for i in range(num_tests):
+        print(f"test {i+1} of {num_tests}")
+        output = pixel_optim_nn.top_opt_funct(data_folder,
+                                              num_epochs = 5000,
+                                              target_db = target_db,
+                                              print_details = False)
+        image = output.images.detach().numpy()[0][0]
+        image = np.concatenate((image,np.flip(image,0)),axis=0)
+        image = np.concatenate((image,np.flip(image,1)),axis=1)
+        images.append(image)
+        print(f"{i+1} done")
+    n_plt_h = round(num_tests**.5)
+    n_plt_w = num_tests//n_plt_h + (num_tests%n_plt_h > 0)
+    fig,axs = plt.subplots(n_plt_h, n_plt_w, figsize=(6,6))
+    i,j=0,0
+    for k in range(num_tests):
+        image = images[k]
+        if filtering == True:
+            image[image<0.5] = 0
+            image[image>=0.5] = 1
+        axs[i,j].imshow(image)
+        axs[i,j].get_xaxis().set_visible(False)
+        axs[i,j].get_yaxis().set_visible(False)
+        if j<(n_plt_w-1):
+            j+=1
+        else:
+            i+=1
+            j=0
+    #fig.suptitle(f"Target Ext. Ratio={target_db} dB")
+    fig.show()
+
+    if save_fig == True:
+        fig.savefig(os.path.expanduser(f"data/studies/seed/seed_study_{target_db}dB.eps"),bbox_inches = "tight")
+    return
+
+
 def generate_for_manuscript(save = True):
     base_folder = os.path.expanduser("./data/studies/db_ranges/manuscript")
     df, df_pareto, model = db_study_load_and_plot(base_folder, save = save)
