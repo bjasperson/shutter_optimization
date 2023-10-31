@@ -18,3 +18,6 @@
 - combined_results_dT: same dataset as original, but updated temperature to report dT.
 - comsol_sim.mph: comsol file for training data generation.
 - raw_data.tar: output files from comsol simulations (to be combined using data_merge.py).
+
+## Manuscript figures
+- Run plotting.py and studies.py to generate data-driven figures for the manuscript.
